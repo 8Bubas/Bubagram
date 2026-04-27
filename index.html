@@ -32,7 +32,7 @@
 </head>
 <body>
 <div id="m-s"><h1>ТЕХ ПЕРЕРЫВ</h1></div>
-<div class="top-bar"><button id="profileBtn">Профиль</button></div>
+<div class="top-bar"><button id="profileBtn">Настройки</button></div>
 <div id="chat-messages"></div>
 <div id="reply-preview"><b id="r-n"></b><span id="r-t"></span><div id="cancel-reply">×</div></div>
 <div class="input-area">
@@ -65,7 +65,31 @@
   let curD = "";
   let rep = null;
 
+  // --- ЛОГИКА УВЕДОМЛЕНИЙ ---
+  function askNotif() {
+      if ("Notification" in window && Notification.permission !== "granted") {
+          Notification.requestPermission();
+      }
+  }
+
+  function sendPush(name, text) {
+      const enabled = localStorage.getItem('max_notif_on') === 'true';
+      if (enabled && "Notification" in window && Notification.permission === "granted") {
+          // Показываем только если вкладка не активна
+          if (document.visibilityState !== 'visible') {
+              new Notification(`Макс: ${name}`, { body: text });
+          }
+      }
+  }
+
   document.getElementById('profileBtn').onclick = () => {
+      // 1. Сначала спрашиваем про уведомления
+      const curN = localStorage.getItem('max_notif_on') === 'true' ? "ВКЛ" : "ВЫКЛ";
+      const qN = confirm(`Уведомления сейчас ${curN}. Включить?`);
+      localStorage.setItem('max_notif_on', qN);
+      if (qN) askNotif();
+
+      // 2. Потом ник
       const n = prompt("Ник (макс 15):", u);
       if (n) {
           const cl = n.trim().substring(0, 15);
@@ -105,6 +129,11 @@
     const k = s.val();
     let cN = k.name ? String(k.name).substring(0, 15) : "Аноним";
     if (!/^[a-zA-Zа-яА-ЯёЁіІїЇєЄґҐ0-9]+$/.test(cN)) { cN = "Юзер"; }
+
+    // Отправляем пуш, если сообщение не от нас
+    if (k.name !== u) {
+        sendPush(cN, k.text);
+    }
 
     if (k.date && k.date !== curD) {
         const h = document.createElement('div'); h.className = 'date-divider';
