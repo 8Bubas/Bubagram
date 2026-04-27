@@ -103,12 +103,14 @@
       modal.style.display = 'flex';
   };
 
-  document.getElementById('notif-btn').onclick = () => {
+  document.getElementById('notif-btn').onclick = async () => {
+      if (!("Notification" in window)) return;
+      if (Notification.permission !== "granted") {
+          const res = await Notification.requestPermission();
+          if (res !== "granted") return;
+      }
       notifsOn = !notifsOn;
       notifStatus.innerText = notifsOn ? "ВКЛ" : "ВЫКЛ";
-      if (notifsOn && Notification.permission !== "granted") {
-          Notification.requestPermission();
-      }
   };
 
   document.getElementById('saveSettings').onclick = () => {
@@ -124,8 +126,14 @@
   function sendPush(name, text, isReply) {
       if (notifsOn && Notification.permission === "granted" && document.visibilityState !== 'visible') {
           const title = isReply ? `Макс: ${name} ответил тебе` : `Макс: ${name}`;
-          const n = new Notification(title, { body: text, icon: 'https://cdn-icons-png.flaticon.com/512/733/733585.png' });
-          setTimeout(() => n.close(), 5000);
+          try {
+              const n = new Notification(title, { 
+                  body: text, 
+                  icon: 'https://cdn-icons-png.flaticon.com/512/733/733585.png',
+                  tag: 'max-msg'
+              });
+              setTimeout(() => n.close(), 5000);
+          } catch(e) {}
       }
   }
 
@@ -155,10 +163,7 @@
   onChildAdded(query(ref(db, 'messages'), limitToLast(50)), (s) => {
     const k = s.val();
     let cN = k.name ? String(k.name).substring(0, 15) : "Аноним";
-    
-    if (k.name !== u) {
-        sendPush(cN, k.text, k.replyTo === u);
-    }
+    if (k.name !== u) sendPush(cN, k.text, k.replyTo === u);
 
     if (k.date && k.date !== curD) {
         const h = document.createElement('div'); h.className = 'date-divider';
