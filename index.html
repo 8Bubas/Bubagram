@@ -8,40 +8,29 @@
         * { box-sizing: border-box; }
         html, body { height: 100%; margin: 0; padding: 0; background: #0b0e14; overflow: hidden; }
         body { font-family: sans-serif; display: flex; flex-direction: column; color: white; }
-        #maint-screen { display: none; position: fixed; inset: 0; background: #0b0e14; z-index: 10000; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
-        #maint-screen h1 { color: #58a6ff; font-size: 28px; }
+        #m-s { display: none; position: fixed; inset: 0; background: #0b0e14; z-index: 10000; flex-direction: column; justify-content: center; align-items: center; }
         .top-bar { background: #1c2128; padding: 0 15px; min-height: 50px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; }
         #profileBtn { background: #30363d; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; }
-        #floating-date { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); background: rgba(48, 54, 61, 0.8); color: #8b949e; padding: 4px 12px; border-radius: 20px; font-size: 11px; z-index: 100; backdrop-filter: blur(4px); pointer-events: none; opacity: 0; transition: opacity 0.3s; }
         #chat-messages { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
-        .date-divider { text-align: center; margin: 15px 0; font-size: 12px; color: #8b949e; position: relative; flex-shrink: 0; }
+        .date-divider { text-align: center; margin: 15px 0; font-size: 12px; color: #8b949e; position: relative; }
         .date-divider span { background: #0b0e14; padding: 0 10px; position: relative; z-index: 2; }
         .date-divider::after { content: ""; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: #30363d; z-index: 1; }
         .msg-wrapper { display: flex; width: 100%; flex-direction: column; flex-shrink: 0; }
         .msg { max-width: 85%; padding: 8px 12px; border-radius: 16px; font-size: 15px; background: #21262d; align-self: flex-start; border: 1px solid #30363d; cursor: pointer; white-space: pre-wrap; word-break: break-word; }
-        .msg b { color: #58a6ff; font-size: 11px; display: block; margin-bottom: 2px; }
-        .reply-box { background: rgba(88, 166, 255, 0.1); border-left: 3px solid #58a6ff; padding: 4px 8px; margin-bottom: 5px; border-radius: 4px; font-size: 13px; color: #8b949e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .msg i { font-style: normal; font-size: 10px; opacity: 0.4; display: block; text-align: right; margin-top: 2px; }
+        .msg b { color: #58a6ff; font-size: 11px; display: block; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .my-msg-wrapper { align-items: flex-end; }
         .my-msg { background: #30363d; border-color: #484f58; align-self: flex-end; border-bottom-right-radius: 4px; }
-        #reply-preview { display: none; background: #1c2128; padding: 8px 15px; border-top: 1px solid #30363d; border-left: 4px solid #58a6ff; position: relative; }
-        #reply-preview b { font-size: 12px; color: #58a6ff; display: block; }
-        #reply-preview span { font-size: 13px; color: #8b949e; }
-        #cancel-reply { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #8b949e; cursor: pointer; font-size: 20px; }
-        .input-area { background: #1c2128; padding: 12px 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; align-items: center; flex-shrink: 0; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
-        input { flex-grow: 1; padding: 12px 16px; border-radius: 24px; border: 1px solid #30363d; outline: none; background: #0d1117; color: white; font-size: 16px; min-width: 0; }
-        #sendBtn { background: none; border: none; color: #58a6ff; font-size: 28px; cursor: pointer; flex-shrink: 0; transition: transform 0.1s; }
-        #sendBtn:active { transform: scale(0.9); }
+        .input-area { background: #1c2128; padding: 12px 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; align-items: center; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+        input { flex-grow: 1; padding: 12px 16px; border-radius: 24px; border: 1px solid #30363d; outline: none; background: #0d1117; color: white; font-size: 16px; }
+        #sendBtn { background: none; border: none; color: #58a6ff; font-size: 28px; cursor: pointer; }
     </style>
 </head>
 <body>
-<div id="maint-screen"><h1>ТЕХ ПЕРЕРЫВ</h1><p>Скоро всё появится</p></div>
-<div id="floating-date"></div>
+<div id="m-s"><h1>ТЕХ ПЕРЕРЫВ</h1></div>
 <div class="top-bar"><button id="profileBtn">Профиль</button></div>
 <div id="chat-messages"></div>
-<div id="reply-preview"><b id="reply-name"></b><span id="reply-text"></span><div id="cancel-reply">×</div></div>
 <div class="input-area">
-    <input type="text" id="msgInput" placeholder="Сообщение" maxlength="100" autocomplete="off">
+    <input type="text" id="m-i" placeholder="Сообщение" maxlength="100" autocomplete="off">
     <button id="sendBtn">➤</button>
 </div>
 
@@ -49,7 +38,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getDatabase, ref, push, onChildAdded, query, limitToLast, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-  const c = {
+  const cfg = {
     apiKey: "AIzaSyCMgd0KOSCfyJ0RWk3qhpk667C0v0358_c",
     authDomain: "bubaschat.firebaseapp.com",
     databaseURL: "https://bubaschat-default-rtdb.firebaseio.com",
@@ -59,78 +48,60 @@
     appId: "1:360805253305:web:6f5ed2c212513f5723b762"
   };
 
-  const a = initializeApp(c);
-  const d = getDatabase(a);
+  const app = initializeApp(cfg);
+  const db = getDatabase(app);
 
-  onValue(ref(d, 'maintenance'), (s) => {
-    document.getElementById('maint-screen').style.display = (s.val() === true) ? 'flex' : 'none';
+  onValue(ref(db, 'maintenance'), (s) => {
+    document.getElementById('m-s').style.display = (s.val() === true) ? 'flex' : 'none';
   });
 
   let u = localStorage.getItem('chat_name') || "Аноним";
-  let l = "";
-  let r = null;
+  let curD = "";
 
   document.getElementById('profileBtn').onclick = () => {
-      const n = prompt("Ник:", u);
-      if (n && n.trim() !== "") { u = n.trim(); localStorage.setItem('chat_name', u); }
+      const n = prompt("Ник (10 симв, только буквы/цифры):", u);
+      if (n) {
+          const cl = n.trim().substring(0, 10);
+          const ok = (cl.match(/[a-zA-Zа-яА-ЯёЁіІїЇєЄґҐ0-9]/g) || []).length;
+          if (ok === cl.length && cl.length >= 2) {
+              u = cl;
+              localStorage.setItem('chat_name', u);
+          }
+      }
   };
 
-  const i = document.getElementById('msgInput');
-  const m = document.getElementById('chat-messages');
-  const p = document.getElementById('reply-preview');
-  const f = document.getElementById('floating-date');
+  const inp = document.getElementById('m-i');
+  const box = document.getElementById('chat-messages');
 
-  let t;
-  m.onscroll = () => {
-      f.style.opacity = "1";
-      clearTimeout(t);
-      t = setTimeout(() => f.style.opacity = "0", 1500);
-      document.querySelectorAll('.date-divider').forEach(v => {
-          if (v.offsetTop - m.scrollTop < 100) f.innerText = v.innerText;
-      });
-  };
-
-  document.getElementById('cancel-reply').onclick = () => { r = null; p.style.display = 'none'; };
-
-  function s() {
-    const v = i.value.trim();
+  function _s() {
+    const v = inp.value.trim();
     const x = (v.match(/[a-zA-Zа-яА-ЯёЁіІїЇєЄґҐ0-9]/g) || []).length;
-    if (v !== "" && v.length <= 100 && x >= 2 && (x / v.length > 0.35)) {
-      const n = new Date();
-      const o = {
+    if (v !== "" && v.length <= 100 && x >= 2 && (x / v.length > 0.3)) {
+      push(ref(db, 'messages'), {
         name: u, text: v,
-        time: n.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        date: n.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
-      };
-      if (r) { o.replyTo = r.name; o.replyText = r.text; }
-      push(ref(d, 'messages'), o);
-      i.value = ""; r = null; p.style.display = 'none';
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+      });
+      inp.value = "";
     }
   }
 
-  document.getElementById('sendBtn').onclick = s;
-  i.onkeypress = (e) => { if(e.key === "Enter") s(); };
+  document.getElementById('sendBtn').onclick = _s;
+  inp.onkeypress = (e) => { if(e.key === "Enter") _s(); };
 
-  onChildAdded(query(ref(d, 'messages'), limitToLast(50)), (n) => {
-    const k = n.val();
-    if (k.date && k.date !== l) {
+  onChildAdded(query(ref(db, 'messages'), limitToLast(50)), (s) => {
+    const k = s.val();
+    if (k.date && k.date !== curD) {
         const h = document.createElement('div'); h.className = 'date-divider';
-        h.innerHTML = `<span>${k.date}</span>`; m.appendChild(h); l = k.date;
+        h.innerHTML = `<span>${k.date}</span>`; box.appendChild(h); curD = k.date;
     }
-    const g = document.createElement('div'); g.className = 'msg-wrapper';
-    if (k.name === u) g.classList.add('my-msg-wrapper');
-    const j = document.createElement('div'); j.className = 'msg';
-    if (k.name === u) j.classList.add('my-msg');
-    let q = k.replyTo ? `<div class="reply-box"><b>${k.replyTo}</b>${k.replyText}</div>` : "";
-    j.innerHTML = `${q}<b>${k.name}</b><span></span><i>${k.time || ''}</i>`;
-    j.querySelector('span').innerText = k.text;
-    j.onclick = () => {
-        r = { name: k.name, text: k.text };
-        document.getElementById('reply-name').innerText = k.name;
-        document.getElementById('reply-text').innerText = k.text;
-        p.style.display = 'block'; i.focus();
-    };
-    g.appendChild(j); m.appendChild(g); m.scrollTop = m.scrollHeight;
+    const w = document.createElement('div'); w.className = 'msg-wrapper';
+    if (k.name === u) w.classList.add('my-msg-wrapper');
+    const m = document.createElement('div'); m.className = 'msg';
+    if (k.name === u) m.classList.add('my-msg');
+    m.innerHTML = `<b>${k.name}</b><span></span><i style="display:block; font-size:10px; opacity:0.4; text-align:right; margin-top:2px;">${k.time}</i>`;
+    m.querySelector('span').innerText = k.text;
+    w.appendChild(m); box.appendChild(w); box.scrollTop = box.scrollHeight;
   });
 </script>
 </body>
