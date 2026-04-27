@@ -147,12 +147,10 @@
       const newN = document.getElementById('set-name').value.trim();
       const newP = document.getElementById('set-pass').value.trim();
       if (newN.length < 1 || newP.length < 4) { showToast("Нужен ник и 4 цифры"); return; }
-      
       const nickRef = ref(db, `active_nicks/${newN}`);
       const snap = await get(nickRef);
       if (snap.exists() && snap.val() !== newP) { showToast("Ник занят"); return; }
       if (u !== newN && u !== "Аноним") remove(ref(db, `active_nicks/${u}`));
-      
       set(nickRef, newP).then(() => {
           u = newN; p = newP;
           localStorage.setItem('chat_name', u); localStorage.setItem('chat_pass', p);
@@ -169,7 +167,6 @@
   function _s() {
     const v = inp.value.trim();
     if (v === "") return;
-
     if (editingId) {
         update(ref(db, `messages/${editingId}`), { text: v, edited: true });
         document.getElementById('cancel-edit').click();
@@ -211,14 +208,17 @@
       }
   };
   document.getElementById('act-del').onclick = () => {
-      if (activeMsg && activeMsg.id && activeMsg.name === u) remove(ref(db, `messages/${activeMsg.id}`));
+      if (activeMsg && activeMsg.id && activeMsg.name === u) {
+          if (confirm("Удалить сообщение у всех?")) {
+              remove(ref(db, `messages/${activeMsg.id}`));
+          }
+      }
   };
 
   onChildAdded(query(ref(db, 'messages'), limitToLast(50)), (s) => {
     const k = s.val();
     const mId = s.key;
     let cN = k.name || "Аноним";
-
     if (k.date && k.date !== curD) {
         const h = document.createElement('div'); h.className = 'date-divider';
         h.innerHTML = `<span>${k.date}</span>`; box.appendChild(h); curD = k.date;
@@ -227,11 +227,9 @@
     if (k.name === u) w.classList.add('my-msg-wrapper');
     const m = document.createElement('div'); m.className = 'msg';
     if (k.name === u) m.classList.add('my-msg');
-    
     let rH = k.replyTo ? `<div class="reply-box"><b>${k.replyTo}</b>${k.replyText}</div>` : "";
     m.innerHTML = `${rH}<b>${cN}</b><span class="txt"></span><div style="display:flex; justify-content:flex-end; align-items:center; margin-top:2px;"><span class="e-l edit-label" style="display:none;">изм.</span><i style="font-size:10px; opacity:0.4;">${k.time}</i></div>`;
     m.querySelector('.txt').innerText = k.text;
-    
     let timer;
     const start = (e) => {
         timer = setTimeout(() => {
@@ -249,7 +247,6 @@
     m.addEventListener('touchend', () => clearTimeout(timer));
     m.addEventListener('mousedown', start);
     m.addEventListener('mouseup', () => clearTimeout(timer));
-
     onValue(ref(db, `messages/${mId}`), (snap) => {
         if (!snap.exists()) { w.remove(); } 
         else { 
@@ -258,7 +255,6 @@
             m.querySelector('.e-l').style.display = d.edited ? 'inline' : 'none';
         }
     });
-    
     w.appendChild(m); box.appendChild(w); box.scrollTop = box.scrollHeight;
   });
 </script>
