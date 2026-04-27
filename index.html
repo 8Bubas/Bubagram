@@ -7,51 +7,25 @@
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #0b0e14; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; color: white; overflow: hidden; }
-        
-        .header { padding: 10px; background: #1c2128; text-align: center; border-bottom: 1px solid #30363d; font-size: 16px; color: #8b949e; }
-
-        /* Контейнер БЕЗ СКРОЛЛА */
-        #chat-messages { 
-            flex-grow: 1; 
-            padding: 15px; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: flex-end; /* Сообщения всегда прижаты к низу */
-            gap: 10px; 
-            overflow: hidden; /* Запрещаем крутить назад */
-        }
-
-        .msg-wrapper { display: flex; width: 100%; flex-direction: column; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .msg { 
-            max-width: 85%; 
-            padding: 12px 16px; 
-            border-radius: 18px; 
-            font-size: 18px; 
-            line-height: 1.4; 
-            word-wrap: break-word; 
-            background: #30363d; 
-            align-self: flex-start;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        }
-
+        #chat-messages { flex-grow: 1; padding: 15px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; overflow: hidden; }
+        .msg-wrapper { display: flex; width: 100%; flex-direction: column; animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .msg { max-width: 85%; padding: 12px 16px; border-radius: 18px; font-size: 18px; line-height: 1.4; word-wrap: break-word; background: #30363d; align-self: flex-start; }
         .my-msg-wrapper { align-items: flex-end; }
         .my-msg { background: #238636; align-self: flex-end; }
-
         .input-area { background: #1c2128; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; }
-        input { flex-grow: 1; padding: 12px 18px; border-radius: 25px; border: none; outline: none; background: #0d1117; color: white; font-size: 18px; }
-        button { background: #238636; color: white; border: none; padding: 0 25px; border-radius: 25px; cursor: pointer; font-weight: bold; }
+        input { flex-grow: 1; padding: 15px; border-radius: 12px; border: none; outline: none; background: #0d1117; color: white; font-size: 18px; }
+        button { background: #238636; color: white; border: none; padding: 0 20px; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 14px; text-transform: uppercase; }
+        button:active { background: #2ea043; transform: scale(0.95); }
     </style>
 </head>
 <body>
 
-<div class="header">История не сохраняется. Только то, что сейчас.</div>
 <div id="chat-messages"></div>
 
 <div class="input-area">
-    <input type="text" id="msgInput" placeholder="Напиши что-нибудь..." autocomplete="off">
-    <button id="sendBtn">➤</button>
+    <input type="text" id="msgInput" placeholder="Пиши сюда..." autocomplete="off">
+    <button id="sendBtn">ОТПРАВИТЬ</button>
 </div>
 
 <script type="module">
@@ -87,8 +61,7 @@
   btn.onclick = sendToDB;
   input.onkeypress = (e) => { if(e.key === "Enter") sendToDB(); };
 
-  // Загружаем только последние 15 сообщений, чтобы экран не был перегружен старьем при входе
-  const lastMessagesQuery = query(messagesRef, limitToLast(15));
+  const lastMessagesQuery = query(messagesRef, limitToLast(20));
 
   onChildAdded(lastMessagesQuery, (snapshot) => {
     const data = snapshot.val();
@@ -98,7 +71,6 @@
   function renderMessage(text) {
     const wrapper = document.createElement('div');
     wrapper.className = 'msg-wrapper';
-    
     const div = document.createElement('div');
     div.className = 'msg';
     
@@ -113,8 +85,7 @@
     wrapper.appendChild(div);
     container.appendChild(wrapper);
 
-    // Если сообщений стало слишком много (больше 20), удаляем самое верхнее из DOM, чтобы не жрало память
-    if (container.children.length > 20) {
+    if (container.children.length > 25) {
         container.removeChild(container.firstChild);
     }
   }
