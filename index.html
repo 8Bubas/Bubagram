@@ -35,11 +35,22 @@
     </style>
 </head>
 <body>
+
 <div id="maint-screen"><h1>ТЕХ ПЕРЕРЫВ</h1><p>Скоро всё появится</p></div>
 <div id="floating-date">Дата</div>
-<div class="top-bar"><button id="profileBtn">Профиль</button></div>
+
+<div class="top-bar">
+    <button id="profileBtn">Профиль</button>
+</div>
+
 <div id="chat-messages"></div>
-<div id="reply-preview"><b id="reply-name">Автор</b><span id="reply-text">Текст</span><div id="cancel-reply">×</div></div>
+
+<div id="reply-preview">
+    <b id="reply-name">Автор</b>
+    <span id="reply-text">Текст</span>
+    <div id="cancel-reply">×</div>
+</div>
+
 <div class="input-area">
     <input type="text" id="msgInput" placeholder="Сообщение" maxlength="500" autocomplete="off">
     <button id="sendBtn">➤</button>
@@ -95,10 +106,10 @@
 
   function send() {
     const t = msgInput.value.trim();
-    // Считаем буквы и цифры
+    // Считаем только буквы и цифры
     const letters = (t.match(/[a-zA-Zа-яА-Я0-9]/g) || []).length;
     
-    // Если букв минимум 2 И их плотность в тексте нормальная (больше 15% букв в сообщении)
+    // ПРОВЕРКА: минимум 2 буквы И плотность (чтобы не было ASCII-артов из точек)
     if (t !== "" && letters >= 2 && (letters / t.length > 0.15 || t.length < 10)) {
       const now = new Date();
       const msgData = {
@@ -109,9 +120,8 @@
       if (currentReply) { msgData.replyTo = currentReply.name; msgData.replyText = currentReply.text; }
       push(ref(db, 'messages'), msgData);
       msgInput.value = ""; currentReply = null; replyPrev.style.display = 'none';
-    } else {
-      alert("Слишком много символов или мало букв! Пиши нормально.");
     }
+    // Если спам — просто ничего не происходит, без алертов.
   }
 
   document.getElementById('sendBtn').onclick = send;
