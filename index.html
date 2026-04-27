@@ -28,10 +28,13 @@
         .action-item:active { background: #30363d; }
         .action-item.del { color: #f85149; }
 
-        #reply-preview { display: none; background: #1c2128; padding: 8px 15px; border-top: 1px solid #30363d; border-left: 4px solid #58a6ff; position: relative; }
-        #reply-preview b { font-size: 12px; color: #58a6ff; display: block; }
-        #reply-preview span { font-size: 13px; color: #8b949e; }
-        #cancel-reply { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #8b949e; cursor: pointer; font-size: 20px; }
+        #reply-preview, #edit-preview { display: none; background: #1c2128; padding: 8px 15px; border-top: 1px solid #30363d; border-left: 4px solid #58a6ff; position: relative; }
+        #edit-preview { border-left-color: #3fb950; }
+        #reply-preview b, #edit-preview b { font-size: 12px; color: #58a6ff; display: block; }
+        #edit-preview b { color: #3fb950; }
+        #reply-preview span, #edit-preview span { font-size: 13px; color: #8b949e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; max-width: 80%; }
+        .cancel-btn { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #8b949e; cursor: pointer; font-size: 20px; }
+        
         .input-area { background: #1c2128; padding: 12px 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; align-items: center; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
         input { flex-grow: 1; padding: 12px 16px; border-radius: 24px; border: 1px solid #30363d; outline: none; background: #0d1117; color: white; font-size: 16px; }
         #sendBtn { background: none; border: none; color: #58a6ff; font-size: 28px; cursor: pointer; }
@@ -54,6 +57,7 @@
 <div id="action-menu">
     <div class="action-item" id="act-reply">Ответить</div>
     <div class="action-item" id="act-copy">Копировать</div>
+    <div class="action-item" id="act-edit">Изменить</div>
     <div class="action-item del" id="act-del">Удалить у всех</div>
 </div>
 
@@ -73,7 +77,17 @@
 </div>
 
 <div id="chat-messages"></div>
-<div id="reply-preview"><b id="r-n"></b><span id="r-t"></span><div id="cancel-reply">×</div></div>
+
+<div id="reply-preview">
+    <b id="r-n"></b><span id="r-t"></span>
+    <div class="cancel-btn" id="cancel-reply">×</div>
+</div>
+
+<div id="edit-preview">
+    <b>Изменение сообщения</b><span id="e-t"></span>
+    <div class="cancel-btn" id="cancel-edit">×</div>
+</div>
+
 <div class="input-area">
     <input type="text" id="m-i" placeholder="Сообщение" maxlength="100" autocomplete="off">
     <button id="sendBtn">➤</button>
@@ -81,7 +95,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, push, onChildAdded, query, limitToLast, onValue, remove, get, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { getDatabase, ref, push, onChildAdded, query, limitToLast, onValue, remove, get, set, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
   const cfg = {
     apiKey: "AIzaSyCMgd0KOSCfyJ0RWk3qhpk667C0v0358_c",
@@ -104,11 +118,17 @@
   let p = localStorage.getItem('chat_pass') || "";
   let curD = "";
   let rep = null;
+  let editingId = null;
   let activeMsg = null;
 
   const modal = document.getElementById('settings-modal');
   const actionMenu = document.getElementById('action-menu');
   const toast = document.getElementById('toast');
+  const inp = document.getElementById('m-i');
+  const box = document.getElementById('chat-messages');
+  const sendBtn = document.getElementById('sendBtn');
+  const rPre = document.getElementById('reply-preview');
+  const ePre = document.getElementById('edit-preview');
 
   function showToast(txt) {
       toast.innerText = txt;
@@ -125,58 +145,50 @@
   document.getElementById('saveSettings').onclick = async () => {
       const newN = document.getElementById('set-name').value.trim();
       const newP = document.getElementById('set-pass').value.trim();
-
-      if (newN.length < 1 || newP.length < 4) {
-          showToast("Нужен ник и 4 цифры пароля");
-          return;
-      }
-
+      if (newN.length < 1 || newP.length < 4) { showToast("Нужен ник и 4 цифры"); return; }
+      
       const nickRef = ref(db, `active_nicks/${newN}`);
       const snap = await get(nickRef);
-
-      if (snap.exists() && snap.val() !== newP) {
-          showToast("Ник занят");
-          return;
-      }
-
-      if (u !== newN && u !== "Аноним") {
-          remove(ref(db, `active_nicks/${u}`));
-      }
-
+      if (snap.exists() && snap.val() !== newP) { showToast("Ник занят"); return; }
+      if (u !== newN && u !== "Аноним") remove(ref(db, `active_nicks/${u}`));
+      
       set(nickRef, newP).then(() => {
-          u = newN;
-          p = newP;
-          localStorage.setItem('chat_name', u);
-          localStorage.setItem('chat_pass', p);
+          u = newN; p = newP;
+          localStorage.setItem('chat_name', u); localStorage.setItem('chat_pass', p);
           modal.style.display = 'none';
-      }).catch(e => {
-          showToast("Ошибка базы данных");
       });
   };
 
-  const inp = document.getElementById('m-i');
-  const box = document.getElementById('chat-messages');
-  const pre = document.getElementById('reply-preview');
-
-  document.getElementById('cancel-reply').onclick = () => { rep = null; pre.style.display = 'none'; };
+  document.getElementById('cancel-reply').onclick = () => { rep = null; rPre.style.display = 'none'; };
+  document.getElementById('cancel-edit').onclick = () => { 
+      editingId = null; 
+      ePre.style.display = 'none'; 
+      inp.value = ""; 
+      sendBtn.innerText = "➤";
+      sendBtn.style.color = "#58a6ff";
+  };
 
   function _s() {
     const v = inp.value.trim();
-    if (v !== "") {
-      const mD = {
-        name: u, text: v,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        date: new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
-      };
-      if (rep) { mD.replyTo = rep.name; mD.replyText = rep.text; }
-      push(ref(db, 'messages'), mD);
-      inp.value = ""; rep = null; pre.style.display = 'none';
+    if (v === "") return;
+
+    if (editingId) {
+        update(ref(db, `messages/${editingId}`), { text: v });
+        document.getElementById('cancel-edit').click();
+    } else {
+        const mD = {
+          name: u, text: v,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          date: new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+        };
+        if (rep) { mD.replyTo = rep.name; mD.replyText = rep.text; }
+        push(ref(db, 'messages'), mD);
+        inp.value = ""; rep = null; rPre.style.display = 'none';
     }
   }
 
-  document.getElementById('sendBtn').onclick = _s;
+  sendBtn.onclick = _s;
   inp.onkeypress = (e) => { if(e.key === "Enter") _s(); };
-
   document.addEventListener('click', () => { actionMenu.style.display = 'none'; });
 
   document.getElementById('act-copy').onclick = () => { if (activeMsg) navigator.clipboard.writeText(activeMsg.text); };
@@ -185,13 +197,24 @@
           rep = { name: activeMsg.name, text: activeMsg.text };
           document.getElementById('r-n').innerText = activeMsg.name;
           document.getElementById('r-t').innerText = activeMsg.text;
-          pre.style.display = 'block'; inp.focus();
+          rPre.style.display = 'block'; ePre.style.display = 'none'; editingId = null;
+          sendBtn.innerText = "➤"; sendBtn.style.color = "#58a6ff";
+          inp.focus();
+      }
+  };
+  document.getElementById('act-edit').onclick = () => {
+      if (activeMsg && activeMsg.name === u) {
+          editingId = activeMsg.id;
+          inp.value = activeMsg.text;
+          document.getElementById('e-t').innerText = activeMsg.text;
+          ePre.style.display = 'block'; rPre.style.display = 'none'; rep = null;
+          sendBtn.innerText = "✓";
+          sendBtn.style.color = "#3fb950";
+          inp.focus();
       }
   };
   document.getElementById('act-del').onclick = () => {
-      if (activeMsg && activeMsg.id && activeMsg.name === u) {
-          remove(ref(db, `messages/${activeMsg.id}`));
-      }
+      if (activeMsg && activeMsg.id && activeMsg.name === u) remove(ref(db, `messages/${activeMsg.id}`));
   };
 
   onChildAdded(query(ref(db, 'messages'), limitToLast(50)), (s) => {
@@ -209,15 +232,17 @@
     if (k.name === u) m.classList.add('my-msg');
     
     let rH = k.replyTo ? `<div class="reply-box"><b>${k.replyTo}</b>${k.replyText}</div>` : "";
-    m.innerHTML = `${rH}<b>${cN}</b><span></span><i style="display:block; font-size:10px; opacity:0.4; text-align:right; margin-top:2px;">${k.time}</i>`;
-    m.querySelector('span').innerText = k.text;
+    m.innerHTML = `${rH}<b>${cN}</b><span class="txt"></span><i style="display:block; font-size:10px; opacity:0.4; text-align:right; margin-top:2px;">${k.time}</i>`;
+    m.querySelector('.txt').innerText = k.text;
     
     let timer;
     const start = (e) => {
         timer = setTimeout(() => {
             activeMsg = { name: cN, text: k.text, el: w, id: mId };
             const t = e.touches ? e.touches[0] : e;
-            document.getElementById('act-del').style.display = (k.name === u) ? 'block' : 'none';
+            const isMine = (k.name === u);
+            document.getElementById('act-del').style.display = isMine ? 'block' : 'none';
+            document.getElementById('act-edit').style.display = isMine ? 'block' : 'none';
             actionMenu.style.top = t.clientY + 'px';
             actionMenu.style.left = Math.min(t.clientX, window.innerWidth - 180) + 'px';
             actionMenu.style.display = 'block';
@@ -228,16 +253,9 @@
     m.addEventListener('mousedown', start);
     m.addEventListener('mouseup', () => clearTimeout(timer));
 
-    m.onclick = () => {
-        if (actionMenu.style.display === 'block') return;
-        rep = { name: cN, text: k.text };
-        document.getElementById('r-n').innerText = cN;
-        document.getElementById('r-t').innerText = k.text;
-        pre.style.display = 'block'; inp.focus();
-    };
-
     onValue(ref(db, `messages/${mId}`), (snap) => {
-        if (!snap.exists()) w.remove();
+        if (!snap.exists()) { w.remove(); } 
+        else { m.querySelector('.txt').innerText = snap.val().text; }
     });
     
     w.appendChild(m); box.appendChild(w); box.scrollTop = box.scrollHeight;
