@@ -11,7 +11,8 @@
         #m-s { display: none; position: fixed; inset: 0; background: #0b0e14; z-index: 10000; flex-direction: column; justify-content: center; align-items: center; }
         .top-bar { background: #1c2128; padding: 0 15px; min-height: 50px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; }
         #profileBtn { background: #30363d; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; }
-        #chat-messages { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+        #chat-messages { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; position: relative; }
+        #floating-date { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); background: rgba(48, 54, 61, 0.8); backdrop-filter: blur(4px); padding: 4px 12px; border-radius: 12px; font-size: 12px; color: #f0f6fc; z-index: 5000; opacity: 0; transition: opacity 0.3s; pointer-events: none; border: 1px solid rgba(255,255,255,0.1); }
         .date-divider { text-align: center; margin: 20px 0; display: flex; justify-content: center; }
         .date-divider span { background: #1c2128; padding: 4px 12px; border-radius: 12px; font-size: 12px; color: #8b949e; border: 1px solid #30363d; }
         .msg-wrapper { display: flex; width: 100%; flex-direction: column; flex-shrink: 0; }
@@ -38,12 +39,12 @@
         #settings-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 20000; align-items: center; justify-content: center; }
         .settings-content { background: #1c2128; padding: 20px; border-radius: 15px; width: 90%; max-width: 320px; border: 1px solid #30363d; }
         #toast { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #f85149; color: white; padding: 10px 20px; border-radius: 8px; z-index: 60000; font-size: 14px; }
-        .edit-label { font-size: 10px; opacity: 0.5; margin-right: 4px; }
     </style>
 </head>
 <body>
 <div id="m-s"><h1>ТЕХ ПЕРЕРЫВ</h1></div>
 <div id="toast"></div>
+<div id="floating-date"></div>
 <div id="confirm-modal">
     <div class="confirm-box">
         <div class="confirm-text">Удалить сообщение у всех?</div>
@@ -104,10 +105,13 @@
   let activeMsg = null;
   let editingId = null;
   let curD = "";
+  let scrollTimer;
   const menu = document.getElementById('action-menu');
   const confModal = document.getElementById('confirm-modal');
   const inp = document.getElementById('m-i');
   const sendBtn = document.getElementById('sendBtn');
+  const fDate = document.getElementById('floating-date');
+  const box = document.getElementById('chat-messages');
   function showToast(txt) {
       const t = document.getElementById('toast');
       t.innerText = txt; t.style.display = 'block';
@@ -115,6 +119,21 @@
   }
   onValue(ref(db, 'maintenance'), (s) => {
     document.getElementById('m-s').style.display = (s.val() === true) ? 'flex' : 'none';
+  });
+  box.addEventListener('scroll', () => {
+      const divs = box.querySelectorAll('.date-divider');
+      let currentVisibleDate = "";
+      divs.forEach(div => {
+          if (div.offsetTop <= box.scrollTop + 100) {
+              currentVisibleDate = div.innerText;
+          }
+      });
+      if (currentVisibleDate) {
+          fDate.innerText = currentVisibleDate;
+          fDate.style.opacity = '1';
+          clearTimeout(scrollTimer);
+          scrollTimer = setTimeout(() => { fDate.style.opacity = '0'; }, 1000);
+      }
   });
   document.getElementById('profileBtn').onclick = () => {
       document.getElementById('set-name').value = u;
@@ -184,7 +203,6 @@
   document.addEventListener('click', (e) => { if(!e.target.closest('.msg')) menu.style.display = 'none'; });
   onChildAdded(query(ref(db, 'messages'), limitToLast(50)), (s) => {
       const d = s.val(); const id = s.key;
-      const box = document.getElementById('chat-messages');
       if(d.date !== curD) {
           const div = document.createElement('div'); div.className = 'date-divider';
           div.innerHTML = `<span>${d.date}</span>`; box.appendChild(div); curD = d.date;
