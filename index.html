@@ -7,21 +7,20 @@
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #0b0e14; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; color: white; overflow: hidden; }
-        
-        /* Экран техперерыва (скрыт по умолчанию) */
         #maint-screen { display: none; position: fixed; inset: 0; background: #0b0e14; z-index: 9999; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
         #maint-screen h1 { color: #58a6ff; font-size: 28px; }
-
-        .top-bar { background: #1c2128; padding: 10px; text-align: center; border-bottom: 1px solid #30363d; font-size: 14px; color: #8b949e; }
-        #chat-messages { flex-grow: 1; padding: 15px; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; overflow-x: hidden; overflow-y: hidden; }
+        .top-bar { background: #1c2128; padding: 12px; height: 45px; border-bottom: 1px solid #30363d; }
+        #chat-messages { flex-grow: 1; padding: 15px; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; overflow-y: auto; scroll-behavior: smooth; }
         .msg-wrapper { display: flex; width: 100%; flex-direction: column; }
-        .msg { max-width: 85%; padding: 10px 14px; border-radius: 15px; font-size: 16px; background: #30363d; align-self: flex-start; max-height: 110px; overflow: hidden; }
-        .msg b { color: #58a6ff; font-size: 13px; display: block; margin-bottom: 2px; }
+        .msg { max-width: 85%; padding: 10px 14px; border-radius: 18px; font-size: 16px; background: #21262d; align-self: flex-start; max-height: 150px; overflow: hidden; border: 1px solid #30363d; }
+        .msg b { color: #58a6ff; font-size: 12px; display: block; margin-bottom: 3px; opacity: 0.9; }
         .my-msg-wrapper { align-items: flex-end; }
-        .my-msg { background: #216e39; align-self: flex-end; }
-        .input-area { background: #1c2128; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; }
-        input { flex-grow: 1; padding: 12px; border-radius: 10px; border: none; outline: none; background: #0d1117; color: white; font-size: 16px; }
-        button { background: #238636; color: white; border: none; padding: 0 20px; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        .my-msg { background: #238636; border: none; align-self: flex-end; border-bottom-right-radius: 4px; color: #f0f6fc; }
+        .input-area { background: #1c2128; padding: 12px 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; align-items: center; }
+        input { flex-grow: 1; padding: 12px 16px; border-radius: 24px; border: 1px solid #30363d; outline: none; background: #0d1117; color: white; font-size: 16px; }
+        input::placeholder { color: #8b949e; opacity: 0.5; }
+        button { background: none; border: none; color: #238636; font-size: 28px; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; transition: transform 0.1s; }
+        button:active { transform: scale(0.9); }
     </style>
 </head>
 <body>
@@ -31,11 +30,11 @@
     <p>Скоро всё появится</p>
 </div>
 
-<div class="top-bar">BubasChat v1.5</div>
+<div class="top-bar"></div>
 <div id="chat-messages"></div>
 
 <div class="input-area">
-    <input type="text" id="msgInput" placeholder="Пиши буквами..." maxlength="100" autocomplete="off">
+    <input type="text" id="msgInput" placeholder="Сообщение" maxlength="100" autocomplete="off">
     <button id="sendBtn">➤</button>
 </div>
 
@@ -56,13 +55,15 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   
-  // РУБИЛЬНИК
   onValue(ref(db, 'maintenance'), (snap) => {
     document.getElementById('maint-screen').style.display = (snap.val() === true) ? 'flex' : 'none';
   });
 
-  let userName = localStorage.getItem('chat_name') || prompt("Ник:") || "Аноним";
-  localStorage.setItem('chat_name', userName);
+  let userName = localStorage.getItem('chat_name');
+  if (!userName) {
+      userName = prompt("Ник:") || "Аноним";
+      localStorage.setItem('chat_name', userName);
+  }
 
   const messagesRef = ref(db, 'messages');
   const input = document.getElementById('msgInput');
@@ -79,7 +80,7 @@
   document.getElementById('sendBtn').onclick = sendToDB;
   input.onkeypress = (e) => { if(e.key === "Enter") sendToDB(); };
 
-  onChildAdded(query(messagesRef, limitToLast(20)), (snap) => {
+  onChildAdded(query(messagesRef, limitToLast(25)), (snap) => {
     const data = snap.val();
     const wrapper = document.createElement('div');
     wrapper.className = 'msg-wrapper';
@@ -91,9 +92,9 @@
     div.querySelector('span').innerText = data.text;
     wrapper.appendChild(div);
     container.appendChild(wrapper);
-    if (container.children.length > 20) container.removeChild(container.firstChild);
+    container.scrollTop = container.scrollHeight;
+    if (container.children.length > 30) container.removeChild(container.firstChild);
   });
 </script>
 </body>
 </html>
-
