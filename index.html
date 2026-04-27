@@ -3,39 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Технический перерыв</title>
+    <title>Bubas Chat</title>
     <style>
-        body {
-            margin: 0;
-            background: #0b0e14;
-            color: #8b949e;
-            font-family: sans-serif;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-        .container {
-            padding: 20px;
-        }
-        h1 {
-            font-size: 24px;
-            color: #58a6ff;
-            margin-bottom: 10px;
-        }
-        p {
-            font-size: 16px;
-            opacity: 0.8;
-        }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #0b0e14; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; color: white; overflow: hidden; }
+        
+        /* Экран техперерыва (скрыт по умолчанию) */
+        #maint-screen { display: none; position: fixed; inset: 0; background: #0b0e14; z-index: 9999; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        #maint-screen h1 { color: #58a6ff; font-size: 28px; }
+
+        .top-bar { background: #1c2128; padding: 10px; text-align: center; border-bottom: 1px solid #30363d; font-size: 14px; color: #8b949e; }
+        #chat-messages { flex-grow: 1; padding: 15px; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; overflow-x: hidden; overflow-y: hidden; }
+        .msg-wrapper { display: flex; width: 100%; flex-direction: column; }
+        .msg { max-width: 85%; padding: 10px 14px; border-radius: 15px; font-size: 16px; background: #30363d; align-self: flex-start; max-height: 110px; overflow: hidden; }
+        .msg b { color: #58a6ff; font-size: 13px; display: block; margin-bottom: 2px; }
+        .my-msg-wrapper { align-items: flex-end; }
+        .my-msg { background: #216e39; align-self: flex-end; }
+        .input-area { background: #1c2128; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; }
+        input { flex-grow: 1; padding: 12px; border-radius: 10px; border: none; outline: none; background: #0d1117; color: white; font-size: 16px; }
+        button { background: #238636; color: white; border: none; padding: 0 20px; border-radius: 10px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div id="maint-screen">
     <h1>ТЕХ ПЕРЕРЫВ</h1>
     <p>Скоро всё появится</p>
 </div>
 
+<div class="top-bar">BubasChat v1.5</div>
+<div id="chat-messages"></div>
+
+<div class="input-area">
+    <input type="text" id="msgInput" placeholder="Пиши буквами..." maxlength="100" autocomplete="off">
+    <button id="sendBtn">➤</button>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, push, onChildAdded, query, limitToLast, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCMgd0KOSCfyJ0RWk3qhpk667C0v0358_c",
+    authDomain: "bubaschat.firebaseapp.com",
+    databaseURL: "https://bubaschat-default-rtdb.firebaseio.com",
+    projectId: "bubaschat",
+    storageBucket: "bubaschat.firebasestorage.app",
+    messagingSenderId: "360805253305",
+    appId: "1:360805253305:web:6f5ed2c212513f5723b762"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  
+  // РУБИЛЬНИК
+  onValue(ref(db, 'maintenance'), (snap) => {
+    document.getElementById('maint-screen').style.display = (snap.val() === true) ? 'flex' : 'none';
+  });
+
+  let userName = localStorage.getItem('chat_name') || prompt("Ник:") || "Аноним";
+  localStorage.setItem('chat_name', userName);
+
+  const messagesRef = ref(db, 'messages');
+  const input = document.getElementById('msgInput');
+  const container = document.getElementById('chat-messages');
+
+  function sendToDB() {
+    const text = input.value.trim();
+    if (text !== "" && /[a-zA-Zа-яА-Я0-9]/.test(text)) {
+      push(messagesRef, { name: userName, text: text });
+      input.value = "";
+    }
+  }
+
+  document.getElementById('sendBtn').onclick = sendToDB;
+  input.onkeypress = (e) => { if(e.key === "Enter") sendToDB(); };
+
+  onChildAdded(query(messagesRef, limitToLast(20)), (snap) => {
+    const data = snap.val();
+    const wrapper = document.createElement('div');
+    wrapper.className = 'msg-wrapper';
+    if (data.name === userName) wrapper.classList.add('my-msg-wrapper');
+    const div = document.createElement('div');
+    div.className = 'msg';
+    if (data.name === userName) div.classList.add('my-msg');
+    div.innerHTML = `<b>${data.name}</b><span></span>`;
+    div.querySelector('span').innerText = data.text;
+    wrapper.appendChild(div);
+    container.appendChild(wrapper);
+    if (container.children.length > 20) container.removeChild(container.firstChild);
+  });
+</script>
 </body>
 </html>
+
