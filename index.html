@@ -11,49 +11,43 @@
         .btns { display: flex; gap: 5px; }
         .top-btn { background: #30363d; color: #8b949e; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
         
-        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1c2128; border: 1px solid #30363d; padding: 20px; border-radius: 12px; z-index: 1000; width: 85%; max-width: 400px; }
-        .modal h3 { margin-top: 0; font-size: 18px; }
-        .modal p { font-size: 14px; line-height: 1.5; }
-        .close-btn { background: #238636; color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; margin-top: 15px; cursor: pointer; font-weight: bold; }
-        
         #chat-messages { flex-grow: 1; padding: 15px; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; overflow: hidden; }
-        .msg-wrapper { display: flex; width: 100%; flex-direction: column; }
+        .msg-wrapper { display: flex; width: 100%; flex-direction: column; position: relative; }
         .msg { max-width: 85%; padding: 10px 14px; border-radius: 15px; font-size: 16px; background: #30363d; align-self: flex-start; max-height: 120px; overflow: hidden; }
         .msg b { color: #58a6ff; font-size: 13px; display: block; margin-bottom: 2px; }
         .my-msg-wrapper { align-items: flex-end; }
-        .my-msg { background: #238636; align-self: flex-end; }
+        .my-msg { background: #216e39; align-self: flex-end; }
         
+        /* Кнопка удаления для админа */
+        .del-btn { display: none; background: #8e1515; color: white; border: none; border-radius: 4px; padding: 2px 8px; font-size: 10px; cursor: pointer; margin-top: 4px; align-self: flex-start; }
+        .admin-mode .del-btn { display: block; }
+        .my-msg-wrapper .del-btn { align-self: flex-end; }
+
         .input-area { background: #1c2128; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; }
         input { flex-grow: 1; padding: 12px; border-radius: 10px; border: none; outline: none; background: #0d1117; color: white; font-size: 16px; }
         button#sendBtn { background: #238636; color: white; border: none; padding: 0 15px; border-radius: 10px; cursor: pointer; }
     </style>
 </head>
-<body>
+<body id="mainBody">
 
 <div class="top-bar">
-    <span>BubasChat v1.4</span>
+    <span>BubasChat v1.9</span>
     <div class="btns">
         <button class="top-btn" id="nameBtn">НИК</button>
-        <button class="top-btn" id="logBtn">ЧТО НОВОГО</button>
+        <button class="top-btn" onclick="location.reload()">ОБНОВИТЬ</button>
     </div>
-</div>
-
-<div class="modal" id="logModal">
-    <h3>Обновление v1.4</h3>
-    <p>Добавлена возможность менять ник через кнопку в меню. Ограничена высота сообщений от спама.</p>
-    <button class="close-btn" onclick="document.getElementById('logModal').style.display='none'">ОК</button>
 </div>
 
 <div id="chat-messages"></div>
 
 <div class="input-area">
-    <input type="text" id="msgInput" placeholder="Макс 100 симв" maxlength="100" autocomplete="off">
+    <input type="text" id="msgInput" placeholder="Пиши..." maxlength="100" autocomplete="off">
     <button id="sendBtn">➤</button>
 </div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, push, onChildAdded, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { getDatabase, ref, push, onChildAdded, onChildRemoved, query, limitToLast, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCMgd0KOSCfyJ0RWk3qhpk667C0v0358_c",
@@ -69,50 +63,75 @@
   const db = getDatabase(app);
   const messagesRef = ref(db, 'messages');
 
-  let userName = localStorage.getItem('chat_name') || prompt("Ник:") || "Аноним";
-  localStorage.setItem('chat_name', userName);
+  let userName = localStorage.getItem('chat_name') || "Аноним";
+  let isAdmin = false;
 
-  document.getElementById('logBtn').onclick = () => document.getElementById('logModal').style.display = 'block';
-  document.getElementById('nameBtn').onclick = () => {
-      let newName = prompt("Новый ник:", userName);
-      if (newName) {
-          userName = newName;
-          localStorage.setItem('chat_name', userName);
-      }
+  const setAdmin = () => {
+      isAdmin = true;
+      document.getElementById('mainBody').classList.add('admin-mode');
   };
 
-  const input = document.getElementById('msgInput');
-  const btn = document.getElementById('sendBtn');
-  const container = document.getElementById('chat-messages');
+  document.getElementById('nameBtn').onclick = () => {
+      let n = prompt("Ник или код:");
+      if (n === "0905") {
+          userName = "Админ";
+          setAdmin();
+      } else if (n) {
+          userName = n;
+          isAdmin = false;
+          document.getElementById('mainBody').classList.remove('admin-mode');
+      }
+      localStorage.setItem('chat_name', userName);
+  };
 
+  let canSend = true;
   function sendToDB() {
     const text = input.value.trim();
-    if (text !== "") {
+    if (text !== "" && canSend) {
+      if (!/[a-zA-Zа-яА-Я0-9]/.test(text) && text.length > 5) return;
       push(messagesRef, { name: userName, text: text });
       input.value = "";
+      canSend = false; 
+      document.getElementById('sendBtn').disabled = true;
+      setTimeout(() => { canSend = true; document.getElementById('sendBtn').disabled = false; }, 2000);
     }
   }
 
-  btn.onclick = sendToDB;
+  document.getElementById('sendBtn').onclick = sendToDB;
   input.onkeypress = (e) => { if(e.key === "Enter") sendToDB(); };
 
-  onChildAdded(query(messagesRef, limitToLast(20)), (snapshot) => {
-    const data = snapshot.val();
-    renderMessage(data.name || "Аноним", data.text);
+  onChildAdded(query(messagesRef, limitToLast(25)), (snapshot) => {
+    renderMessage(snapshot.key, snapshot.val().name, snapshot.val().text);
   });
 
-  function renderMessage(name, text) {
+  onChildRemoved(messagesRef, (snapshot) => {
+    const el = document.getElementById(snapshot.key);
+    if (el) el.remove();
+  });
+
+  function renderMessage(id, name, text) {
     const wrapper = document.createElement('div');
     wrapper.className = 'msg-wrapper';
+    wrapper.id = id;
     if (name === userName) wrapper.classList.add('my-msg-wrapper');
+
     const div = document.createElement('div');
     div.className = 'msg';
     if (name === userName) div.classList.add('my-msg');
     div.innerHTML = `<b>${name}</b><span></span>`;
     div.querySelector('span').innerText = text;
+    
+    // Кнопка удаления (видна только в режиме админа)
+    const del = document.createElement('button');
+    del.className = 'del-btn';
+    del.innerText = 'удалить';
+    del.onclick = () => { if(confirm("Удалить?")) remove(ref(db, 'messages/' + id)); };
+
     wrapper.appendChild(div);
-    container.appendChild(wrapper);
-    if (container.children.length > 25) container.removeChild(container.firstChild);
+    wrapper.appendChild(del);
+    document.getElementById('chat-messages').appendChild(wrapper);
+    const container = document.getElementById('chat-messages');
+    if (container.children.length > 30) container.removeChild(container.firstChild);
   }
 </script>
 </body>
