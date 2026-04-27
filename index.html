@@ -16,14 +16,14 @@
         .date-divider span { background: #0b0e14; padding: 0 10px; position: relative; z-index: 2; }
         .date-divider::after { content: ""; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: #30363d; z-index: 1; }
         .msg-wrapper { display: flex; width: 100%; flex-direction: column; flex-shrink: 0; }
-        .msg { max-width: 85%; padding: 8px 12px; border-radius: 16px; font-size: 15px; background: #21262d; align-self: flex-start; border: 1px solid #30363d; cursor: pointer; white-space: pre-wrap; word-break: break-word; user-select: none; position: relative; }
+        .msg { max-width: 85%; padding: 8px 12px; border-radius: 16px; font-size: 15px; background: #21262d; align-self: flex-start; border: 1px solid #30363d; cursor: pointer; white-space: pre-wrap; word-break: break-word; user-select: none; }
         .msg b { color: #58a6ff; font-size: 11px; display: block; margin-bottom: 2px; }
         .reply-box { background: rgba(88, 166, 255, 0.1); border-left: 3px solid #58a6ff; padding: 4px 8px; margin-bottom: 5px; border-radius: 4px; font-size: 13px; color: #8b949e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .my-msg-wrapper { align-items: flex-end; }
         .my-msg { background: #30363d; border-color: #484f58; align-self: flex-end; border-bottom-right-radius: 4px; }
         
-        #action-menu { display: none; position: fixed; background: #1c2128; border: 1px solid #30363d; border-radius: 12px; z-index: 30000; min-width: 160px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.6); }
-        .action-item { padding: 14px 16px; font-size: 15px; cursor: pointer; border-bottom: 1px solid #30363d; transition: background 0.1s; }
+        #action-menu { display: none; position: fixed; background: #1c2128; border: 1px solid #30363d; border-radius: 12px; z-index: 30000; min-width: 170px; overflow: hidden; box-shadow: 0 5px 25px rgba(0,0,0,0.7); }
+        .action-item { padding: 14px 18px; font-size: 15px; cursor: pointer; border-bottom: 1px solid #30363d; transition: background 0.1s; }
         .action-item:last-child { border-bottom: none; }
         .action-item:active { background: #30363d; }
         .action-item.del { color: #f85149; }
@@ -52,7 +52,7 @@
 <div id="action-menu">
     <div class="action-item" id="act-reply">Ответить</div>
     <div class="action-item" id="act-copy">Копировать</div>
-    <div class="action-item del" id="act-del">Удалить у себя</div>
+    <div class="action-item del" id="act-del">Удалить у всех</div>
 </div>
 
 <div id="settings-modal">
@@ -75,7 +75,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, push, onChildAdded, query, limitToLast, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { getDatabase, ref, push, onChildAdded, query, limitToLast, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
   const cfg = {
     apiKey: "AIzaSyCMgd0KOSCfyJ0RWk3qhpk667C0v0358_c",
@@ -101,6 +101,9 @@
 
   const modal = document.getElementById('settings-modal');
   const actionMenu = document.getElementById('action-menu');
+  const inp = document.getElementById('m-i');
+  const box = document.getElementById('chat-messages');
+  const pre = document.getElementById('reply-preview');
 
   document.getElementById('profileBtn').onclick = () => {
       document.getElementById('set-name').value = u;
@@ -112,10 +115,6 @@
       if (n.length >= 1) { u = n; localStorage.setItem('chat_name', u); }
       modal.style.display = 'none';
   };
-
-  const inp = document.getElementById('m-i');
-  const box = document.getElementById('chat-messages');
-  const pre = document.getElementById('reply-preview');
 
   document.getElementById('cancel-reply').onclick = () => { rep = null; pre.style.display = 'none'; };
 
@@ -147,11 +146,18 @@
           pre.style.display = 'block'; inp.focus();
       }
   };
-  document.getElementById('act-del').onclick = () => { if (activeMsg) activeMsg.el.style.display = 'none'; };
+
+  document.getElementById('act-del').onclick = () => {
+      if (activeMsg && activeMsg.id && activeMsg.name === u) {
+          remove(ref(db, `messages/${activeMsg.id}`));
+      }
+  };
 
   onChildAdded(query(ref(db, 'messages'), limitToLast(50)), (s) => {
     const k = s.val();
+    const mId = s.key;
     let cN = k.name || "Аноним";
+
     if (k.date && k.date !== curD) {
         const h = document.createElement('div'); h.className = 'date-divider';
         h.innerHTML = `<span>${k.date}</span>`; box.appendChild(h); curD = k.date;
@@ -168,12 +174,11 @@
     let timer;
     const start = (e) => {
         timer = setTimeout(() => {
-            activeMsg = { name: cN, text: k.text, el: w };
+            activeMsg = { name: cN, text: k.text, el: w, id: mId };
             const t = e.touches ? e.touches[0] : e;
-            // Показываем "Удалить" только если сообщение моё
             document.getElementById('act-del').style.display = (k.name === u) ? 'block' : 'none';
             actionMenu.style.top = t.clientY + 'px';
-            actionMenu.style.left = Math.min(t.clientX, window.innerWidth - 170) + 'px';
+            actionMenu.style.left = Math.min(t.clientX, window.innerWidth - 180) + 'px';
             actionMenu.style.display = 'block';
         }, 500);
     };
@@ -189,6 +194,10 @@
         document.getElementById('r-t').innerText = k.text;
         pre.style.display = 'block'; inp.focus();
     };
+
+    onValue(ref(db, `messages/${mId}`), (snap) => {
+        if (!snap.exists()) w.remove();
+    });
     
     w.appendChild(m); box.appendChild(w); box.scrollTop = box.scrollHeight;
   });
