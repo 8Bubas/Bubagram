@@ -47,6 +47,7 @@
         .settings-content input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: white; outline: none; }
         #saveSettings { width: 100%; background: #58a6ff; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         #toast { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #f85149; color: white; padding: 10px 20px; border-radius: 8px; z-index: 40000; font-size: 14px; }
+        .edit-label { font-size: 10px; opacity: 0.5; margin-right: 4px; }
     </style>
 </head>
 <body>
@@ -161,11 +162,8 @@
 
   document.getElementById('cancel-reply').onclick = () => { rep = null; rPre.style.display = 'none'; };
   document.getElementById('cancel-edit').onclick = () => { 
-      editingId = null; 
-      ePre.style.display = 'none'; 
-      inp.value = ""; 
-      sendBtn.innerText = "➤";
-      sendBtn.style.color = "#58a6ff";
+      editingId = null; ePre.style.display = 'none'; inp.value = ""; 
+      sendBtn.innerText = "➤"; sendBtn.style.color = "#58a6ff";
   };
 
   function _s() {
@@ -173,7 +171,7 @@
     if (v === "") return;
 
     if (editingId) {
-        update(ref(db, `messages/${editingId}`), { text: v });
+        update(ref(db, `messages/${editingId}`), { text: v, edited: true });
         document.getElementById('cancel-edit').click();
     } else {
         const mD = {
@@ -208,8 +206,7 @@
           inp.value = activeMsg.text;
           document.getElementById('e-t').innerText = activeMsg.text;
           ePre.style.display = 'block'; rPre.style.display = 'none'; rep = null;
-          sendBtn.innerText = "✓";
-          sendBtn.style.color = "#3fb950";
+          sendBtn.innerText = "✓"; sendBtn.style.color = "#3fb950";
           inp.focus();
       }
   };
@@ -232,7 +229,7 @@
     if (k.name === u) m.classList.add('my-msg');
     
     let rH = k.replyTo ? `<div class="reply-box"><b>${k.replyTo}</b>${k.replyText}</div>` : "";
-    m.innerHTML = `${rH}<b>${cN}</b><span class="txt"></span><i style="display:block; font-size:10px; opacity:0.4; text-align:right; margin-top:2px;">${k.time}</i>`;
+    m.innerHTML = `${rH}<b>${cN}</b><span class="txt"></span><div style="display:flex; justify-content:flex-end; align-items:center; margin-top:2px;"><span class="e-l edit-label" style="display:none;">изм.</span><i style="font-size:10px; opacity:0.4;">${k.time}</i></div>`;
     m.querySelector('.txt').innerText = k.text;
     
     let timer;
@@ -255,7 +252,11 @@
 
     onValue(ref(db, `messages/${mId}`), (snap) => {
         if (!snap.exists()) { w.remove(); } 
-        else { m.querySelector('.txt').innerText = snap.val().text; }
+        else { 
+            const d = snap.val();
+            m.querySelector('.txt').innerText = d.text;
+            m.querySelector('.e-l').style.display = d.edited ? 'inline' : 'none';
+        }
     });
     
     w.appendChild(m); box.appendChild(w); box.scrollTop = box.scrollHeight;
