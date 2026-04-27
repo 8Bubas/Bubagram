@@ -5,54 +5,71 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Украинский MAX</title>
     <style>
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        html, body { height: 100%; margin: 0; padding: 0; background: #0b0e14; overflow: hidden; }
-        body { font-family: sans-serif; display: flex; flex-direction: column; color: white; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+        html, body { height: 100%; margin: 0; padding: 0; background: #0b0e14; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { display: flex; flex-direction: column; color: white; }
+        
+        /* Заглушка техперерыва */
         #m-s { display: none; position: fixed; inset: 0; background: #0b0e14; z-index: 10000; flex-direction: column; justify-content: center; align-items: center; }
+        
         .top-bar { background: #1c2128; padding: 0 15px; min-height: 50px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; }
         #profileBtn { background: #30363d; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+
         #chat-messages { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
-        .date-divider { text-align: center; margin: 15px 0; font-size: 12px; color: #8b949e; position: relative; }
-        .date-divider span { background: #0b0e14; padding: 0 10px; position: relative; z-index: 2; }
-        .date-divider::after { content: ""; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: #30363d; z-index: 1; }
+        
+        /* Сообщения */
         .msg-wrapper { display: flex; width: 100%; flex-direction: column; flex-shrink: 0; }
-        .msg { max-width: 85%; padding: 8px 12px; border-radius: 16px; font-size: 15px; background: #21262d; align-self: flex-start; border: 1px solid #30363d; cursor: pointer; white-space: pre-wrap; word-break: break-word; user-select: none; }
+        .msg { max-width: 85%; padding: 8px 12px; border-radius: 16px; font-size: 15px; background: #21262d; align-self: flex-start; border: 1px solid #30363d; cursor: pointer; white-space: pre-wrap; word-break: break-word; position: relative; }
         .msg b { color: #58a6ff; font-size: 11px; display: block; margin-bottom: 2px; }
-        .reply-box { background: rgba(88, 166, 255, 0.1); border-left: 3px solid #58a6ff; padding: 4px 8px; margin-bottom: 5px; border-radius: 4px; font-size: 13px; color: #8b949e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .my-msg-wrapper { align-items: flex-end; }
         .my-msg { background: #30363d; border-color: #484f58; align-self: flex-end; border-bottom-right-radius: 4px; }
         
+        /* Меню действий */
         #action-menu { display: none; position: fixed; background: #1c2128; border: 1px solid #30363d; border-radius: 12px; z-index: 30000; min-width: 170px; overflow: hidden; box-shadow: 0 5px 25px rgba(0,0,0,0.7); }
-        .action-item { padding: 14px 18px; font-size: 15px; cursor: pointer; border-bottom: 1px solid #30363d; }
+        .action-item { padding: 12px 18px; font-size: 15px; cursor: pointer; border-bottom: 1px solid #30363d; }
         .action-item:last-child { border-bottom: none; }
-        .action-item:active { background: #30363d; }
         .action-item.del { color: #f85149; }
 
+        /* Красивое подтверждение удаления (Custom Confirm) */
+        #confirm-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 50000; align-items: center; justify-content: center; }
+        .confirm-box { background: #1c2128; width: 85%; max-width: 280px; border-radius: 14px; border: 1px solid #30363d; text-align: center; overflow: hidden; }
+        .confirm-text { padding: 20px; font-size: 16px; line-height: 1.4; border-bottom: 1px solid #30363d; }
+        .confirm-btns { display: flex; }
+        .confirm-btns button { flex: 1; padding: 14px; border: none; background: none; color: #58a6ff; font-size: 16px; cursor: pointer; font-weight: 500; }
+        .confirm-btns button.btn-del { color: #f85149; border-left: 1px solid #30363d; }
+
+        /* Ввод сообщения */
+        .input-area { background: #1c2128; padding: 12px 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; align-items: center; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+        input { flex-grow: 1; padding: 10px 16px; border-radius: 20px; border: 1px solid #30363d; background: #0d1117; color: white; font-size: 16px; }
+        #sendBtn { background: none; border: none; color: #58a6ff; font-size: 26px; cursor: pointer; }
+
+        /* Превью ответа/изменения */
         #reply-preview, #edit-preview { display: none; background: #1c2128; padding: 8px 15px; border-top: 1px solid #30363d; border-left: 4px solid #58a6ff; position: relative; }
         #edit-preview { border-left-color: #3fb950; }
-        #reply-preview b, #edit-preview b { font-size: 12px; color: #58a6ff; display: block; }
-        #edit-preview b { color: #3fb950; }
-        #reply-preview span, #edit-preview span { font-size: 13px; color: #8b949e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; max-width: 80%; }
         .cancel-btn { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #8b949e; cursor: pointer; font-size: 20px; }
-        
-        .input-area { background: #1c2128; padding: 12px 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; align-items: center; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
-        input { flex-grow: 1; padding: 12px 16px; border-radius: 24px; border: 1px solid #30363d; outline: none; background: #0d1117; color: white; font-size: 16px; }
-        #sendBtn { background: none; border: none; color: #58a6ff; font-size: 28px; cursor: pointer; }
 
+        /* Настройки */
         #settings-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 20000; align-items: center; justify-content: center; }
         .settings-content { background: #1c2128; padding: 20px; border-radius: 15px; width: 90%; max-width: 320px; border: 1px solid #30363d; }
-        .settings-content h3 { margin-top: 0; color: #58a6ff; }
-        .setting-item { margin-bottom: 15px; }
-        .setting-item label { display: block; font-size: 14px; color: #8b949e; margin-bottom: 5px; }
-        .settings-content input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: white; outline: none; }
-        #saveSettings { width: 100%; background: #58a6ff; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        #toast { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #f85149; color: white; padding: 10px 20px; border-radius: 8px; z-index: 40000; font-size: 14px; }
+        #toast { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #f85149; color: white; padding: 10px 20px; border-radius: 8px; z-index: 60000; font-size: 14px; }
         .edit-label { font-size: 10px; opacity: 0.5; margin-right: 4px; }
     </style>
 </head>
 <body>
+
 <div id="m-s"><h1>ТЕХ ПЕРЕРЫВ</h1></div>
 <div id="toast"></div>
+
+<div id="confirm-modal">
+    <div class="confirm-box">
+        <div class="confirm-text">Удалить сообщение у всех?</div>
+        <div class="confirm-btns">
+            <button id="conf-cancel">Отмена</button>
+            <button id="conf-yes" class="btn-del">Удалить</button>
+        </div>
+    </div>
+</div>
+
 <div class="top-bar"><button id="profileBtn">Настройки</button></div>
 
 <div id="action-menu">
@@ -64,28 +81,26 @@
 
 <div id="settings-modal">
     <div class="settings-content">
-        <h3>Настройки</h3>
-        <div class="setting-item">
-            <label>Ник:</label>
-            <input type="text" id="set-name" maxlength="15">
-        </div>
-        <div class="setting-item">
-            <label>Пароль (4 цифры):</label>
-            <input type="password" id="set-pass" maxlength="4" inputmode="numeric">
-        </div>
-        <button id="saveSettings">Сохранить</button>
+        <h3 style="margin-top:0; color:#58a6ff;">Настройки</h3>
+        <label style="font-size:12px; color:#8b949e;">Ник:</label>
+        <input type="text" id="set-name" maxlength="15" style="width:100%; margin-bottom:15px; margin-top:5px;">
+        <label style="font-size:12px; color:#8b949e;">Пароль (4 цифры):</label>
+        <input type="password" id="set-pass" maxlength="4" inputmode="numeric" style="width:100%; margin-bottom:15px; margin-top:5px;">
+        <button id="saveSettings" style="width:100%; background:#58a6ff; color:white; border:none; padding:12px; border-radius:8px; font-weight:bold;">Сохранить</button>
     </div>
 </div>
 
 <div id="chat-messages"></div>
 
 <div id="reply-preview">
-    <b id="r-n"></b><span id="r-t"></span>
+    <b id="r-n" style="font-size:12px; color:#58a6ff; display:block;"></b>
+    <span id="r-t" style="font-size:13px; color:#8b949e; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
     <div class="cancel-btn" id="cancel-reply">×</div>
 </div>
 
 <div id="edit-preview">
-    <b>Изменение сообщения</b><span id="e-t"></span>
+    <b style="font-size:12px; color:#3fb950; display:block;">Изменение</b>
+    <span id="e-t" style="font-size:13px; color:#8b949e; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
     <div class="cancel-btn" id="cancel-edit">×</div>
 </div>
 
@@ -111,151 +126,134 @@
   const app = initializeApp(cfg);
   const db = getDatabase(app);
 
-  onValue(ref(db, 'maintenance'), (s) => {
-    document.getElementById('m-s').style.display = (s.val() === true) ? 'flex' : 'none';
-  });
-
   let u = localStorage.getItem('chat_name') || "Аноним";
   let p = localStorage.getItem('chat_pass') || "";
-  let curD = "";
-  let rep = null;
-  let editingId = null;
   let activeMsg = null;
+  let editingId = null;
+  let curD = "";
 
-  const modal = document.getElementById('settings-modal');
-  const actionMenu = document.getElementById('action-menu');
-  const toast = document.getElementById('toast');
+  const menu = document.getElementById('action-menu');
+  const confModal = document.getElementById('confirm-modal');
   const inp = document.getElementById('m-i');
-  const box = document.getElementById('chat-messages');
   const sendBtn = document.getElementById('sendBtn');
-  const rPre = document.getElementById('reply-preview');
-  const ePre = document.getElementById('edit-preview');
 
   function showToast(txt) {
-      toast.innerText = txt;
-      toast.style.display = 'block';
-      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+      const t = document.getElementById('toast');
+      t.innerText = txt; t.style.display = 'block';
+      setTimeout(() => t.style.display = 'none', 3000);
   }
 
+  // Настройки
   document.getElementById('profileBtn').onclick = () => {
       document.getElementById('set-name').value = u;
       document.getElementById('set-pass').value = p;
-      modal.style.display = 'flex';
+      document.getElementById('settings-modal').style.display = 'flex';
   };
 
   document.getElementById('saveSettings').onclick = async () => {
-      const newN = document.getElementById('set-name').value.trim();
-      const newP = document.getElementById('set-pass').value.trim();
-      if (newN.length < 1 || newP.length < 4) { showToast("Нужен ник и 4 цифры"); return; }
-      const nickRef = ref(db, `active_nicks/${newN}`);
-      const snap = await get(nickRef);
-      if (snap.exists() && snap.val() !== newP) { showToast("Ник занят"); return; }
-      if (u !== newN && u !== "Аноним") remove(ref(db, `active_nicks/${u}`));
-      set(nickRef, newP).then(() => {
-          u = newN; p = newP;
+      const n = document.getElementById('set-name').value.trim();
+      const ps = document.getElementById('set-pass').value.trim();
+      if(!n || ps.length < 4) { showToast("Ник и 4 цифры пароля!"); return; }
+      const snap = await get(ref(db, `active_nicks/${n}`));
+      if(snap.exists() && snap.val() !== ps) { showToast("Ник занят"); return; }
+      if(u !== n && u !== "Аноним") remove(ref(db, `active_nicks/${u}`));
+      set(ref(db, `active_nicks/${n}`), ps).then(() => {
+          u = n; p = ps;
           localStorage.setItem('chat_name', u); localStorage.setItem('chat_pass', p);
-          modal.style.display = 'none';
+          document.getElementById('settings-modal').style.display = 'none';
       });
   };
 
-  document.getElementById('cancel-reply').onclick = () => { rep = null; rPre.style.display = 'none'; };
+  // Удаление (красивое)
+  document.getElementById('act-del').onclick = () => {
+      menu.style.display = 'none';
+      confModal.style.display = 'flex';
+  };
+  document.getElementById('conf-cancel').onclick = () => confModal.style.display = 'none';
+  document.getElementById('conf-yes').onclick = () => {
+      if(activeMsg && activeMsg.id) remove(ref(db, `messages/${activeMsg.id}`));
+      confModal.style.display = 'none';
+  };
+
+  // Копирование и Ответ
+  document.getElementById('act-copy').onclick = () => { navigator.clipboard.writeText(activeMsg.text); menu.style.display = 'none'; };
+  document.getElementById('act-reply').onclick = () => {
+      editingId = null;
+      document.getElementById('r-n').innerText = activeMsg.name;
+      document.getElementById('r-t').innerText = activeMsg.text;
+      document.getElementById('reply-preview').style.display = 'block';
+      document.getElementById('edit-preview').style.display = 'none';
+      menu.style.display = 'none'; inp.focus();
+  };
+
+  // Изменение
+  document.getElementById('act-edit').onclick = () => {
+      editingId = activeMsg.id;
+      inp.value = activeMsg.text;
+      document.getElementById('e-t').innerText = activeMsg.text;
+      document.getElementById('edit-preview').style.display = 'block';
+      document.getElementById('reply-preview').style.display = 'none';
+      sendBtn.innerText = "✓"; sendBtn.style.color = "#3fb950";
+      menu.style.display = 'none'; inp.focus();
+  };
+
+  document.getElementById('cancel-reply').onclick = () => { activeMsg.reply = null; document.getElementById('reply-preview').style.display = 'none'; };
   document.getElementById('cancel-edit').onclick = () => { 
-      editingId = null; ePre.style.display = 'none'; inp.value = ""; 
+      editingId = null; inp.value = ""; 
+      document.getElementById('edit-preview').style.display = 'none';
       sendBtn.innerText = "➤"; sendBtn.style.color = "#58a6ff";
   };
 
-  function _s() {
-    const v = inp.value.trim();
-    if (v === "") return;
-    if (editingId) {
-        update(ref(db, `messages/${editingId}`), { text: v, edited: true });
-        document.getElementById('cancel-edit').click();
-    } else {
-        const mD = {
-          name: u, text: v,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          date: new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
-        };
-        if (rep) { mD.replyTo = rep.name; mD.replyText = rep.text; }
-        push(ref(db, 'messages'), mD);
-        inp.value = ""; rep = null; rPre.style.display = 'none';
-    }
+  function send() {
+      const v = inp.value.trim();
+      if(!v) return;
+      if(editingId) {
+          update(ref(db, `messages/${editingId}`), { text: v, edited: true });
+          document.getElementById('cancel-edit').onclick();
+      } else {
+          const m = { name: u, text: v, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), date: new Date().toLocaleDateString('ru-RU', {day:'numeric', month:'long'}) };
+          const rp = document.getElementById('reply-preview');
+          if(rp.style.display === 'block') { m.replyTo = document.getElementById('r-n').innerText; m.replyText = document.getElementById('r-t').innerText; }
+          push(ref(db, 'messages'), m);
+          inp.value = ""; rp.style.display = 'none';
+      }
   }
 
-  sendBtn.onclick = _s;
-  inp.onkeypress = (e) => { if(e.key === "Enter") _s(); };
-  document.addEventListener('click', () => { actionMenu.style.display = 'none'; });
-
-  document.getElementById('act-copy').onclick = () => { if (activeMsg) navigator.clipboard.writeText(activeMsg.text); };
-  document.getElementById('act-reply').onclick = () => {
-      if (activeMsg) {
-          rep = { name: activeMsg.name, text: activeMsg.text };
-          document.getElementById('r-n').innerText = activeMsg.name;
-          document.getElementById('r-t').innerText = activeMsg.text;
-          rPre.style.display = 'block'; ePre.style.display = 'none'; editingId = null;
-          sendBtn.innerText = "➤"; sendBtn.style.color = "#58a6ff";
-          inp.focus();
-      }
-  };
-  document.getElementById('act-edit').onclick = () => {
-      if (activeMsg && activeMsg.name === u) {
-          editingId = activeMsg.id;
-          inp.value = activeMsg.text;
-          document.getElementById('e-t').innerText = activeMsg.text;
-          ePre.style.display = 'block'; rPre.style.display = 'none'; rep = null;
-          sendBtn.innerText = "✓"; sendBtn.style.color = "#3fb950";
-          inp.focus();
-      }
-  };
-  document.getElementById('act-del').onclick = () => {
-      if (activeMsg && activeMsg.id && activeMsg.name === u) {
-          if (confirm("Удалить сообщение у всех?")) {
-              remove(ref(db, `messages/${activeMsg.id}`));
-          }
-      }
-  };
+  sendBtn.onclick = send;
+  inp.onkeypress = (e) => { if(e.key === "Enter") send(); };
+  document.addEventListener('click', (e) => { if(!e.target.closest('.msg')) menu.style.display = 'none'; });
 
   onChildAdded(query(ref(db, 'messages'), limitToLast(50)), (s) => {
-    const k = s.val();
-    const mId = s.key;
-    let cN = k.name || "Аноним";
-    if (k.date && k.date !== curD) {
-        const h = document.createElement('div'); h.className = 'date-divider';
-        h.innerHTML = `<span>${k.date}</span>`; box.appendChild(h); curD = k.date;
-    }
-    const w = document.createElement('div'); w.className = 'msg-wrapper';
-    if (k.name === u) w.classList.add('my-msg-wrapper');
-    const m = document.createElement('div'); m.className = 'msg';
-    if (k.name === u) m.classList.add('my-msg');
-    let rH = k.replyTo ? `<div class="reply-box"><b>${k.replyTo}</b>${k.replyText}</div>` : "";
-    m.innerHTML = `${rH}<b>${cN}</b><span class="txt"></span><div style="display:flex; justify-content:flex-end; align-items:center; margin-top:2px;"><span class="e-l edit-label" style="display:none;">изм.</span><i style="font-size:10px; opacity:0.4;">${k.time}</i></div>`;
-    m.querySelector('.txt').innerText = k.text;
-    let timer;
-    const start = (e) => {
-        timer = setTimeout(() => {
-            activeMsg = { name: cN, text: k.text, el: w, id: mId };
-            const t = e.touches ? e.touches[0] : e;
-            const isMine = (k.name === u);
-            document.getElementById('act-del').style.display = isMine ? 'block' : 'none';
-            document.getElementById('act-edit').style.display = isMine ? 'block' : 'none';
-            actionMenu.style.top = t.clientY + 'px';
-            actionMenu.style.left = Math.min(t.clientX, window.innerWidth - 180) + 'px';
-            actionMenu.style.display = 'block';
-        }, 500);
-    };
-    m.addEventListener('touchstart', start);
-    m.addEventListener('touchend', () => clearTimeout(timer));
-    m.addEventListener('mousedown', start);
-    m.addEventListener('mouseup', () => clearTimeout(timer));
-    onValue(ref(db, `messages/${mId}`), (snap) => {
-        if (!snap.exists()) { w.remove(); } 
-        else { 
-            const d = snap.val();
-            m.querySelector('.txt').innerText = d.text;
-            m.querySelector('.e-l').style.display = d.edited ? 'inline' : 'none';
-        }
-    });
-    w.appendChild(m); box.appendChild(w); box.scrollTop = box.scrollHeight;
+      const d = s.val(); const id = s.key;
+      const box = document.getElementById('chat-messages');
+      if(d.date !== curD) {
+          const div = document.createElement('div'); div.className = 'date-divider';
+          div.innerHTML = `<span>${d.date}</span>`; box.appendChild(div); curD = d.date;
+      }
+      const wrap = document.createElement('div'); wrap.className = 'msg-wrapper';
+      if(d.name === u) wrap.classList.add('my-msg-wrapper');
+      const m = document.createElement('div'); m.className = 'msg' + (d.name === u ? ' my-msg' : '');
+      
+      let repH = d.replyTo ? `<div style="background:rgba(88,166,255,0.1); border-left:3px solid #58a6ff; padding:4px 8px; margin-bottom:5px; border-radius:4px; font-size:13px; color:#8b949e; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><b>${d.replyTo}</b>${d.replyText}</div>` : "";
+      
+      m.innerHTML = `${repH}<b>${d.name}</b><span class="t">${d.text}</span><div style="display:flex; justify-content:flex-end; align-items:center; margin-top:2px;"><span class="ed" style="font-size:10px; opacity:0.5; margin-right:4px; display:${d.edited?'inline':'none'}">изм.</span><i style="font-size:10px; opacity:0.4;">${d.time}</i></div>`;
+      
+      // МГНОВЕННЫЙ КЛИК ВМЕСТО ЗАЖИМА
+      m.onclick = (e) => {
+          activeMsg = { id, name: d.name, text: d.text };
+          document.getElementById('act-del').style.display = (d.name === u) ? 'block' : 'none';
+          document.getElementById('act-edit').style.display = (d.name === u) ? 'block' : 'none';
+          menu.style.left = Math.min(e.clientX, window.innerWidth - 180) + 'px';
+          menu.style.top = Math.min(e.clientY, window.innerHeight - 200) + 'px';
+          menu.style.display = 'block';
+      };
+
+      onValue(ref(db, `messages/${id}`), (sn) => {
+          if(!sn.exists()) wrap.remove();
+          else { m.querySelector('.t').innerText = sn.val().text; m.querySelector('.ed').style.display = sn.val().edited ? 'inline' : 'none'; }
+      });
+
+      wrap.appendChild(m); box.appendChild(wrap); box.scrollTop = box.scrollHeight;
   });
 </script>
 </body>
