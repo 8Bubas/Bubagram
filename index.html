@@ -35,24 +35,13 @@
     </style>
 </head>
 <body>
-
 <div id="maint-screen"><h1>ТЕХ ПЕРЕРЫВ</h1><p>Скоро всё появится</p></div>
-<div id="floating-date">Дата</div>
-
-<div class="top-bar">
-    <button id="profileBtn">Профиль</button>
-</div>
-
+<div id="floating-date"></div>
+<div class="top-bar"><button id="profileBtn">Профиль</button></div>
 <div id="chat-messages"></div>
-
-<div id="reply-preview">
-    <b id="reply-name">Автор</b>
-    <span id="reply-text">Текст</span>
-    <div id="cancel-reply">×</div>
-</div>
-
+<div id="reply-preview"><b id="reply-name"></b><span id="reply-text"></span><div id="cancel-reply">×</div></div>
 <div class="input-area">
-    <input type="text" id="msgInput" placeholder="Сообщение" maxlength="500" autocomplete="off">
+    <input type="text" id="msgInput" placeholder="Сообщение" maxlength="100" autocomplete="off">
     <button id="sendBtn">➤</button>
 </div>
 
@@ -60,7 +49,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getDatabase, ref, push, onChildAdded, query, limitToLast, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-  const firebaseConfig = {
+  const c = {
     apiKey: "AIzaSyCMgd0KOSCfyJ0RWk3qhpk667C0v0358_c",
     authDomain: "bubaschat.firebaseapp.com",
     databaseURL: "https://bubaschat-default-rtdb.firebaseio.com",
@@ -70,83 +59,78 @@
     appId: "1:360805253305:web:6f5ed2c212513f5723b762"
   };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+  const a = initializeApp(c);
+  const d = getDatabase(a);
 
-  onValue(ref(db, 'maintenance'), (snap) => {
-    document.getElementById('maint-screen').style.display = (snap.val() === true) ? 'flex' : 'none';
+  onValue(ref(d, 'maintenance'), (s) => {
+    document.getElementById('maint-screen').style.display = (s.val() === true) ? 'flex' : 'none';
   });
 
-  let userName = localStorage.getItem('chat_name') || "Аноним";
-  let lastDateLabel = "";
-  let currentReply = null;
+  let u = localStorage.getItem('chat_name') || "Аноним";
+  let l = "";
+  let r = null;
 
   document.getElementById('profileBtn').onclick = () => {
-      const n = prompt("Ник:", userName);
-      if (n && n.trim() !== "") { userName = n.trim(); localStorage.setItem('chat_name', userName); }
+      const n = prompt("Ник:", u);
+      if (n && n.trim() !== "") { u = n.trim(); localStorage.setItem('chat_name', u); }
   };
 
-  const msgInput = document.getElementById('msgInput');
-  const container = document.getElementById('chat-messages');
-  const replyPrev = document.getElementById('reply-preview');
-  const floatDate = document.getElementById('floating-date');
+  const i = document.getElementById('msgInput');
+  const m = document.getElementById('chat-messages');
+  const p = document.getElementById('reply-preview');
+  const f = document.getElementById('floating-date');
 
-  let dateTimer;
-  container.onscroll = () => {
-      floatDate.style.opacity = "1";
-      clearTimeout(dateTimer);
-      dateTimer = setTimeout(() => floatDate.style.opacity = "0", 1500);
-      const dividers = document.querySelectorAll('.date-divider');
-      dividers.forEach(div => {
-          if (div.offsetTop - container.scrollTop < 100) floatDate.innerText = div.innerText;
+  let t;
+  m.onscroll = () => {
+      f.style.opacity = "1";
+      clearTimeout(t);
+      t = setTimeout(() => f.style.opacity = "0", 1500);
+      document.querySelectorAll('.date-divider').forEach(v => {
+          if (v.offsetTop - m.scrollTop < 100) f.innerText = v.innerText;
       });
   };
 
-  document.getElementById('cancel-reply').onclick = () => { currentReply = null; replyPrev.style.display = 'none'; };
+  document.getElementById('cancel-reply').onclick = () => { r = null; p.style.display = 'none'; };
 
-  function send() {
-    const t = msgInput.value.trim();
-    // Считаем только буквы и цифры
-    const letters = (t.match(/[a-zA-Zа-яА-Я0-9]/g) || []).length;
-    
-    // ПРОВЕРКА: минимум 2 буквы И плотность (чтобы не было ASCII-артов из точек)
-    if (t !== "" && letters >= 2 && (letters / t.length > 0.15 || t.length < 10)) {
-      const now = new Date();
-      const msgData = {
-        name: userName, text: t,
-        time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        date: now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+  function s() {
+    const v = i.value.trim();
+    const x = (v.match(/[a-zA-Zа-яА-ЯёЁіІїЇєЄґҐ0-9]/g) || []).length;
+    if (v !== "" && v.length <= 100 && x >= 2 && (x / v.length > 0.35)) {
+      const n = new Date();
+      const o = {
+        name: u, text: v,
+        time: n.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: n.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
       };
-      if (currentReply) { msgData.replyTo = currentReply.name; msgData.replyText = currentReply.text; }
-      push(ref(db, 'messages'), msgData);
-      msgInput.value = ""; currentReply = null; replyPrev.style.display = 'none';
+      if (r) { o.replyTo = r.name; o.replyText = r.text; }
+      push(ref(d, 'messages'), o);
+      i.value = ""; r = null; p.style.display = 'none';
     }
-    // Если спам — просто ничего не происходит, без алертов.
   }
 
-  document.getElementById('sendBtn').onclick = send;
-  msgInput.onkeypress = (e) => { if(e.key === "Enter") send(); };
+  document.getElementById('sendBtn').onclick = s;
+  i.onkeypress = (e) => { if(e.key === "Enter") s(); };
 
-  onChildAdded(query(ref(db, 'messages'), limitToLast(50)), (snap) => {
-    const d = snap.val();
-    if (d.date && d.date !== lastDateLabel) {
-        const div = document.createElement('div'); div.className = 'date-divider';
-        div.innerHTML = `<span>${d.date}</span>`; container.appendChild(div); lastDateLabel = d.date;
+  onChildAdded(query(ref(d, 'messages'), limitToLast(50)), (n) => {
+    const k = n.val();
+    if (k.date && k.date !== l) {
+        const h = document.createElement('div'); h.className = 'date-divider';
+        h.innerHTML = `<span>${k.date}</span>`; m.appendChild(h); l = k.date;
     }
-    const w = document.createElement('div'); w.className = 'msg-wrapper';
-    if (d.name === userName) w.classList.add('my-msg-wrapper');
-    const m = document.createElement('div'); m.className = 'msg';
-    if (d.name === userName) m.classList.add('my-msg');
-    let rH = d.replyTo ? `<div class="reply-box"><b>${d.replyTo}</b>${d.replyText}</div>` : "";
-    m.innerHTML = `${rH}<b>${d.name}</b><span></span><i>${d.time || ''}</i>`;
-    m.querySelector('span').innerText = d.text;
-    m.onclick = () => {
-        currentReply = { name: d.name, text: d.text };
-        document.getElementById('reply-name').innerText = d.name;
-        document.getElementById('reply-text').innerText = d.text;
-        replyPrev.style.display = 'block'; msgInput.focus();
+    const g = document.createElement('div'); g.className = 'msg-wrapper';
+    if (k.name === u) g.classList.add('my-msg-wrapper');
+    const j = document.createElement('div'); j.className = 'msg';
+    if (k.name === u) j.classList.add('my-msg');
+    let q = k.replyTo ? `<div class="reply-box"><b>${k.replyTo}</b>${k.replyText}</div>` : "";
+    j.innerHTML = `${q}<b>${k.name}</b><span></span><i>${k.time || ''}</i>`;
+    j.querySelector('span').innerText = k.text;
+    j.onclick = () => {
+        r = { name: k.name, text: k.text };
+        document.getElementById('reply-name').innerText = k.name;
+        document.getElementById('reply-text').innerText = k.text;
+        p.style.display = 'block'; i.focus();
     };
-    w.appendChild(m); container.appendChild(w); container.scrollTop = container.scrollHeight;
+    g.appendChild(j); m.appendChild(g); m.scrollTop = m.scrollHeight;
   });
 </script>
 </body>
