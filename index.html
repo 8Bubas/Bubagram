@@ -12,7 +12,7 @@
         .top-bar { background: #1c2128; padding: 0 15px; min-height: 50px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; }
         #profileBtn { background: #30363d; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; }
         #chat-messages { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; position: relative; }
-        #floating-date { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); background: rgba(48, 54, 61, 0.8); backdrop-filter: blur(4px); padding: 4px 12px; border-radius: 12px; font-size: 12px; color: #f0f6fc; z-index: 5000; opacity: 0; transition: opacity 0.3s; pointer-events: none; border: 1px solid rgba(255,255,255,0.1); }
+        #floating-date { position: fixed; top: 65px; left: 50%; transform: translateX(-50%); background: rgba(33, 38, 45, 0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 3px 10px; border-radius: 12px; font-size: 11px; color: rgba(240, 246, 252, 0.8); z-index: 5000; opacity: 0; transition: opacity 0.3s; pointer-events: none; border: 1px solid rgba(255,255,255,0.05); }
         .date-divider { text-align: center; margin: 20px 0; display: flex; justify-content: center; }
         .date-divider span { background: #1c2128; padding: 4px 12px; border-radius: 12px; font-size: 12px; color: #8b949e; border: 1px solid #30363d; }
         .msg-wrapper { display: flex; width: 100%; flex-direction: column; flex-shrink: 0; }
@@ -122,15 +122,12 @@
   });
   box.addEventListener('scroll', () => {
       const divs = box.querySelectorAll('.date-divider');
-      let currentVisibleDate = "";
+      let cvd = "";
       divs.forEach(div => {
-          if (div.offsetTop <= box.scrollTop + 100) {
-              currentVisibleDate = div.innerText;
-          }
+          if (div.offsetTop <= box.scrollTop + 120) cvd = div.innerText;
       });
-      if (currentVisibleDate) {
-          fDate.innerText = currentVisibleDate;
-          fDate.style.opacity = '1';
+      if (cvd) {
+          fDate.innerText = cvd; fDate.style.opacity = '1';
           clearTimeout(scrollTimer);
           scrollTimer = setTimeout(() => { fDate.style.opacity = '0'; }, 1000);
       }
@@ -210,8 +207,8 @@
       const wrap = document.createElement('div'); wrap.className = 'msg-wrapper';
       if(d.name === u) wrap.classList.add('my-msg-wrapper');
       const m = document.createElement('div'); m.className = 'msg' + (d.name === u ? ' my-msg' : '');
-      let repH = d.replyTo ? `<div style="background:rgba(88,166,255,0.1); border-left:3px solid #58a6ff; padding:4px 8px; margin-bottom:5px; border-radius:4px; font-size:13px; color:#8b949e; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><b>${d.replyTo}</b>${d.replyText}</div>` : "";
-      m.innerHTML = `${repH}<b>${d.name}</b><span class="t">${d.text}</span><div style="display:flex; justify-content:flex-end; align-items:center; margin-top:2px;"><span class="ed" style="font-size:10px; opacity:0.5; margin-right:4px; display:${d.edited?'inline':'none'}">изм.</span><i style="font-size:10px; opacity:0.4;">${d.time}</i></div>`;
+      let rH = d.replyTo ? `<div style="background:rgba(88,166,255,0.1); border-left:3px solid #58a6ff; padding:4px 8px; margin-bottom:5px; border-radius:4px; font-size:13px; color:#8b949e; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><b>${d.replyTo}</b>${d.replyText}</div>` : "";
+      m.innerHTML = `${rH}<b>${d.name}</b><span class="t">${d.text}</span><div style="display:flex; justify-content:flex-end; align-items:center; margin-top:2px;"><span class="ed" style="font-size:10px; opacity:0.5; margin-right:4px; display:${d.edited?'inline':'none'}">изм.</span><i style="font-size:10px; opacity:0.4;">${d.time}</i></div>`;
       m.onclick = (e) => {
           activeMsg = { id, name: d.name, text: d.text };
           document.getElementById('act-del').style.display = (d.name === u) ? 'block' : 'none';
