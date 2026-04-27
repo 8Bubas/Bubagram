@@ -3,88 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bubas Chat Ultra Slow</title>
+    <title>Bubas Online</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #0b0e14; font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; }
-        #chat-area { flex-grow: 1; position: relative; perspective: 1000px; }
-        
-        .bubble { 
-            position: absolute; 
-            bottom: -60px; 
-            padding: 14px 20px; 
-            border-radius: 25px; 
-            color: white; 
-            font-weight: bold; 
-            font-size: 18px; 
-            white-space: nowrap; 
-            /* Время полета — 35 секунд! */
-            animation: flyUp 35s ease-in-out forwards; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
-            pointer-events: none;
-        }
-
+        body { margin: 0; overflow: hidden; background: #0b0e14; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; }
+        #chat-area { flex-grow: 1; position: relative; }
+        .bubble { position: absolute; bottom: -60px; padding: 14px 20px; border-radius: 25px; color: white; font-weight: bold; font-size: 18px; white-space: nowrap; animation: flyUp 30s linear forwards; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         @keyframes flyUp {
-            0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+            0% { transform: translateY(0); opacity: 0; }
             5% { opacity: 1; }
-            /* Эффект покачивания влево-вправо во время подъема */
-            25% { transform: translateY(-25vh) translateX(20px) rotate(2deg); }
-            50% { transform: translateY(-50vh) translateX(-20px) rotate(-2deg); }
-            75% { transform: translateY(-75vh) translateX(20px) rotate(1deg); }
-            90% { opacity: 1; }
-            100% { transform: translateY(-105vh) translateX(0) rotate(0); opacity: 0; }
+            100% { transform: translateY(-105vh); opacity: 0; }
         }
-
-        .input-area { background: #1c2128; padding: 25px; display: flex; gap: 10px; border-top: 2px solid #30363d; z-index: 100; }
+        .input-area { background: #1c2128; padding: 20px; display: flex; gap: 10px; border-top: 2px solid #30363d; z-index: 100; }
         input { flex-grow: 1; padding: 15px; border-radius: 12px; border: none; outline: none; background: #0d1117; color: white; font-size: 18px; }
-        button { background: #238636; color: white; border: none; padding: 0 25px; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 16px; }
-        
-        .friend { background: linear-gradient(135deg, #2ea043, #56d364); border: 2px solid #7eff8b; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        button { background: #238636; color: white; border: none; padding: 0 20px; border-radius: 12px; cursor: pointer; font-weight: bold; }
+        .friend { background: linear-gradient(135deg, #2ea043, #56d364); border: 2px solid #7eff8b; }
         .neutral { background: linear-gradient(135deg, #30363d, #484f58); border: 1px solid #8b949e; }
     </style>
 </head>
 <body>
 
 <div id="chat-area"></div>
-
 <div class="input-area">
-    <input type="text" id="msgInput" placeholder="Напиши что-то... (! для своих)" autocomplete="off">
-    <button onclick="sendMsg()">ОТПРАВИТЬ</button>
+    <input type="text" id="msgInput" placeholder="Пиши сюда..." autocomplete="off">
+    <button id="sendBtn">ОТПРАВИТЬ</button>
 </div>
 
-<script>
-    const input = document.getElementById('msgInput');
-    const area = document.getElementById('chat-area');
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    function sendMsg() {
-        const text = input.value.trim();
-        if (text === "") return;
-        createBubble(text);
-        input.value = "";
+  // Твои данные, которые мы искали
+  const firebaseConfig = {
+    apiKey: "AIzaSyCMgd0KOSCfyJ0RWk3qhpk667C0v0358_c",
+    authDomain: "bubaschat.firebaseapp.com",
+    databaseURL: "https://bubaschat-default-rtdb.firebaseio.com",
+    projectId: "bubaschat",
+    storageBucket: "bubaschat.firebasestorage.app",
+    messagingSenderId: "360805253305",
+    appId: "1:360805253305:web:6f5ed2c212513f5723b762"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const messagesRef = ref(db, 'messages');
+
+  const input = document.getElementById('msgInput');
+  const btn = document.getElementById('sendBtn');
+  const area = document.getElementById('chat-area');
+
+  function sendToDB() {
+    const text = input.value.trim();
+    if (text !== "") {
+      push(messagesRef, { text: text });
+      input.value = "";
     }
+  }
 
-    function createBubble(text) {
-        const b = document.createElement('div');
-        b.innerText = text;
-        b.className = 'bubble';
-        
-        if (text.startsWith('!')) {
-            b.classList.add('friend');
-        } else {
-            b.classList.add('neutral');
-        }
+  btn.onclick = sendToDB;
+  input.onkeypress = (e) => { if(e.key === "Enter") sendToDB(); };
 
-        // Чтобы не вылетало за края экрана
-        const randomX = Math.floor(Math.random() * (window.innerWidth - 200)) + 20;
-        b.style.left = randomX + 'px';
+  onChildAdded(messagesRef, (snapshot) => {
+    const data = snapshot.val();
+    createBubble(data.text);
+  });
 
-        area.appendChild(b);
-
-        // Удаляем через 36 секунд
-        setTimeout(() => { b.remove(); }, 36000);
-    }
-
-    input.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMsg(); });
+  function createBubble(text) {
+    const b = document.createElement('div');
+    b.innerText = text;
+    b.className = 'bubble ' + (text.startsWith('!') ? 'friend' : 'neutral');
+    b.style.left = Math.random() * (window.innerWidth - 150) + 'px';
+    area.appendChild(b);
+    setTimeout(() => b.remove(), 30000);
+  }
 </script>
-
 </body>
 </html>
