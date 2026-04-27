@@ -23,7 +23,7 @@
         .my-msg { background: #30363d; border-color: #484f58; align-self: flex-end; border-bottom-right-radius: 4px; }
         
         #action-menu { display: none; position: fixed; background: #1c2128; border: 1px solid #30363d; border-radius: 12px; z-index: 30000; min-width: 170px; overflow: hidden; box-shadow: 0 5px 25px rgba(0,0,0,0.7); }
-        .action-item { padding: 14px 18px; font-size: 15px; cursor: pointer; border-bottom: 1px solid #30363d; transition: background 0.1s; }
+        .action-item { padding: 14px 18px; font-size: 15px; cursor: pointer; border-bottom: 1px solid #30363d; }
         .action-item:last-child { border-bottom: none; }
         .action-item:active { background: #30363d; }
         .action-item.del { color: #f85149; }
@@ -39,14 +39,17 @@
         #settings-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 20000; align-items: center; justify-content: center; }
         .settings-content { background: #1c2128; padding: 20px; border-radius: 15px; width: 90%; max-width: 320px; border: 1px solid #30363d; }
         .settings-content h3 { margin-top: 0; color: #58a6ff; }
-        .setting-item { margin-bottom: 20px; }
-        .setting-item label { display: block; font-size: 14px; color: #8b949e; margin-bottom: 8px; }
-        .settings-content input[type="text"] { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: white; outline: none; }
-        #saveSettings { width: 100%; background: #58a6ff; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .setting-item { margin-bottom: 15px; }
+        .setting-item label { display: block; font-size: 14px; color: #8b949e; margin-bottom: 5px; }
+        .settings-content input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: white; outline: none; }
+        #saveSettings { width: 100%; background: #58a6ff; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+
+        #toast { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #f85149; color: white; padding: 10px 20px; border-radius: 8px; z-index: 40000; font-size: 14px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
 <div id="m-s"><h1>ТЕХ ПЕРЕРЫВ</h1></div>
+<div id="toast"></div>
 <div class="top-bar"><button id="profileBtn">Настройки</button></div>
 
 <div id="action-menu">
@@ -59,8 +62,12 @@
     <div class="settings-content">
         <h3>Настройки</h3>
         <div class="setting-item">
-            <label>Твой ник:</label>
+            <label>Ник:</label>
             <input type="text" id="set-name" maxlength="15">
+        </div>
+        <div class="setting-item">
+            <label>Пароль (4 цифры):</label>
+            <input type="password" id="set-pass" maxlength="4" inputmode="numeric">
         </div>
         <button id="saveSettings">Сохранить</button>
     </div>
@@ -75,7 +82,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, push, onChildAdded, query, limitToLast, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { getDatabase, ref, push, onChildAdded, query, limitToLast, onValue, remove, get, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
   const cfg = {
     apiKey: "AIzaSyCMgd0KOSCfyJ0RWk3qhpk667C0v0358_c",
@@ -95,6 +102,7 @@
   });
 
   let u = localStorage.getItem('chat_name') || "Аноним";
+  let p = localStorage.getItem('chat_pass') || "";
   let curD = "";
   let rep = null;
   let activeMsg = null;
@@ -104,15 +112,50 @@
   const inp = document.getElementById('m-i');
   const box = document.getElementById('chat-messages');
   const pre = document.getElementById('reply-preview');
+  const toast = document.getElementById('toast');
+
+  function showToast(txt) {
+      toast.innerText = txt;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+  }
 
   document.getElementById('profileBtn').onclick = () => {
       document.getElementById('set-name').value = u;
+      document.getElementById('set-pass').value = p;
       modal.style.display = 'flex';
   };
 
-  document.getElementById('saveSettings').onclick = () => {
-      const n = document.getElementById('set-name').value.trim().substring(0, 15);
-      if (n.length >= 1) { u = n; localStorage.setItem('chat_name', u); }
+  document.getElementById('saveSettings').onclick = async () => {
+      const newN = document.getElementById('set-name').value.trim().substring(0, 15);
+      const newP = document.getElementById('set-pass').value.trim().substring(0, 4);
+
+      if (newN.length < 1 || newP.length < 4) {
+          showToast("Введи никнейм и пароль из 4 цифр");
+          return;
+      }
+
+      if (newN !== u) {
+          const nickRef = ref(db, `active_nicks/${newN}`);
+          const snap = await get(nickRef);
+
+          if (snap.exists() && snap.val() !== newP) {
+              showToast("Ник занят");
+              return;
+          }
+
+          if (u !== "Аноним") {
+              remove(ref(db, `active_nicks/${u}`));
+          }
+          set(nickRef, newP);
+      } else {
+          set(ref(db, `active_nicks/${u}`), newP);
+      }
+
+      u = newN;
+      p = newP;
+      localStorage.setItem('chat_name', u);
+      localStorage.setItem('chat_pass', p);
       modal.style.display = 'none';
   };
 
