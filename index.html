@@ -12,6 +12,9 @@
         .top-bar { background: #1c2128; padding: 0 15px; height: 50px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: flex-end; }
         #profileBtn { background: #30363d; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; }
         #chat-messages { flex-grow: 1; padding: 15px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scroll-behavior: smooth; }
+        .date-divider { text-align: center; margin: 15px 0; font-size: 12px; color: #8b949e; position: relative; }
+        .date-divider span { background: #0b0e14; padding: 0 10px; position: relative; z-index: 2; }
+        .date-divider::after { content: ""; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: #30363d; z-index: 1; }
         .msg-wrapper { display: flex; width: 100%; flex-direction: column; }
         .msg { max-width: 85%; padding: 8px 12px; border-radius: 16px; font-size: 15px; background: #21262d; align-self: flex-start; border: 1px solid #30363d; position: relative; }
         .msg b { color: #58a6ff; font-size: 11px; display: block; margin-bottom: 2px; }
@@ -65,6 +68,7 @@
   });
 
   let userName = localStorage.getItem('chat_name') || "Аноним";
+  let lastDateLabel = "";
 
   document.getElementById('profileBtn').onclick = () => {
       const newName = prompt("Введите новый ник:", userName);
@@ -82,8 +86,10 @@
   function sendToDB() {
     const text = input.value.trim();
     if (text !== "" && /[a-zA-Zа-яА-Я0-9]/.test(text)) {
-      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      push(messagesRef, { name: userName, text: text, time: time });
+      const now = new Date();
+      const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const date = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+      push(messagesRef, { name: userName, text: text, time: time, date: date });
       input.value = "";
     }
   }
@@ -91,8 +97,17 @@
   document.getElementById('sendBtn').onclick = sendToDB;
   input.onkeypress = (e) => { if(e.key === "Enter") sendToDB(); };
 
-  onChildAdded(query(messagesRef, limitToLast(30)), (snap) => {
+  onChildAdded(query(messagesRef, limitToLast(50)), (snap) => {
     const data = snap.val();
+    
+    if (data.date && data.date !== lastDateLabel) {
+        const dateDiv = document.createElement('div');
+        dateDiv.className = 'date-divider';
+        dateDiv.innerHTML = `<span>${data.date}</span>`;
+        container.appendChild(dateDiv);
+        lastDateLabel = data.date;
+    }
+
     const wrapper = document.createElement('div');
     wrapper.className = 'msg-wrapper';
     if (data.name === userName) wrapper.classList.add('my-msg-wrapper');
@@ -107,7 +122,6 @@
     wrapper.appendChild(div);
     container.appendChild(wrapper);
     container.scrollTop = container.scrollHeight;
-    if (container.children.length > 50) container.removeChild(container.firstChild);
   });
 </script>
 </body>
