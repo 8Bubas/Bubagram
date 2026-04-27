@@ -28,11 +28,38 @@
         .input-area { background: #1c2128; padding: 12px 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; align-items: center; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
         input { flex-grow: 1; padding: 12px 16px; border-radius: 24px; border: 1px solid #30363d; outline: none; background: #0d1117; color: white; font-size: 16px; }
         #sendBtn { background: none; border: none; color: #58a6ff; font-size: 28px; cursor: pointer; }
+
+        #settings-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 20000; align-items: center; justify-content: center; }
+        .settings-content { background: #1c2128; padding: 20px; border-radius: 15px; width: 90%; max-width: 320px; border: 1px solid #30363d; }
+        .settings-content h3 { margin-top: 0; color: #58a6ff; }
+        .setting-item { margin-bottom: 20px; }
+        .setting-item label { display: block; font-size: 14px; color: #8b949e; margin-bottom: 8px; }
+        .settings-content input[type="text"] { width: 100%; margin-bottom: 10px; }
+        .toggle-btn { display: flex; align-items: center; justify-content: space-between; background: #30363d; padding: 10px; border-radius: 8px; cursor: pointer; }
+        #saveSettings { width: 100%; background: #58a6ff; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
 <div id="m-s"><h1>ТЕХ ПЕРЕРЫВ</h1></div>
 <div class="top-bar"><button id="profileBtn">Настройки</button></div>
+
+<div id="settings-modal">
+    <div class="settings-content">
+        <h3>Настройки</h3>
+        <div class="setting-item">
+            <label>Твой ник:</label>
+            <input type="text" id="set-name" maxlength="15">
+        </div>
+        <div class="setting-item">
+            <div class="toggle-btn" id="notif-btn">
+                <span>Уведомления</span>
+                <span id="notif-status">ВЫКЛ</span>
+            </div>
+        </div>
+        <button id="saveSettings">Сохранить</button>
+    </div>
+</div>
+
 <div id="chat-messages"></div>
 <div id="reply-preview"><b id="r-n"></b><span id="r-t"></span><div id="cancel-reply">×</div></div>
 <div class="input-area">
@@ -64,42 +91,43 @@
   let u = localStorage.getItem('chat_name') || "Аноним";
   let curD = "";
   let rep = null;
+  let notifsOn = localStorage.getItem('max_notif_on') === 'true';
 
-  // --- ЛОГИКА УВЕДОМЛЕНИЙ ---
-  function askNotif() {
-      if ("Notification" in window && Notification.permission !== "granted") {
-          Notification.requestPermission();
-      }
-  }
-
-  function sendPush(name, text) {
-      const enabled = localStorage.getItem('max_notif_on') === 'true';
-      if (enabled && "Notification" in window && Notification.permission === "granted") {
-          // Показываем только если вкладка не активна
-          if (document.visibilityState !== 'visible') {
-              new Notification(`Макс: ${name}`, { body: text });
-          }
-      }
-  }
+  const modal = document.getElementById('settings-modal');
+  const setName = document.getElementById('set-name');
+  const notifStatus = document.getElementById('notif-status');
 
   document.getElementById('profileBtn').onclick = () => {
-      // 1. Сначала спрашиваем про уведомления
-      const curN = localStorage.getItem('max_notif_on') === 'true' ? "ВКЛ" : "ВЫКЛ";
-      const qN = confirm(`Уведомления сейчас ${curN}. Включить?`);
-      localStorage.setItem('max_notif_on', qN);
-      if (qN) askNotif();
+      setName.value = u;
+      notifStatus.innerText = notifsOn ? "ВКЛ" : "ВЫКЛ";
+      modal.style.display = 'flex';
+  };
 
-      // 2. Потом ник
-      const n = prompt("Ник (макс 15):", u);
-      if (n) {
-          const cl = n.trim().substring(0, 15);
-          const ok = (cl.match(/[a-zA-Zа-яА-ЯёЁіІїЇєЄґҐ0-9]/g) || []).length;
-          if (ok === cl.length && cl.length >= 1) {
-              u = cl;
-              localStorage.setItem('chat_name', u);
-          }
+  document.getElementById('notif-btn').onclick = () => {
+      notifsOn = !notifsOn;
+      notifStatus.innerText = notifsOn ? "ВКЛ" : "ВЫКЛ";
+      if (notifsOn && Notification.permission !== "granted") {
+          Notification.requestPermission();
       }
   };
+
+  document.getElementById('saveSettings').onclick = () => {
+      const n = setName.value.trim().substring(0, 15);
+      if (n.length >= 1 && /^[a-zA-Zа-яА-ЯёЁіІїЇєЄґҐ0-9]+$/.test(n)) {
+          u = n;
+          localStorage.setItem('chat_name', u);
+      }
+      localStorage.setItem('max_notif_on', notifsOn);
+      modal.style.display = 'none';
+  };
+
+  function sendPush(name, text, isReply) {
+      if (notifsOn && Notification.permission === "granted" && document.visibilityState !== 'visible') {
+          const title = isReply ? `Макс: ${name} ответил тебе` : `Макс: ${name}`;
+          const n = new Notification(title, { body: text, icon: 'https://cdn-icons-png.flaticon.com/512/733/733585.png' });
+          setTimeout(() => n.close(), 5000);
+      }
+  }
 
   const inp = document.getElementById('m-i');
   const box = document.getElementById('chat-messages');
@@ -109,8 +137,7 @@
 
   function _s() {
     const v = inp.value.trim();
-    const x = (v.match(/[a-zA-Zа-яА-ЯёЁіІїЇєЄґҐ0-9]/g) || []).length;
-    if (v !== "" && v.length <= 100 && x >= 1 && (x / v.length > 0.3)) {
+    if (v !== "" && v.length <= 100) {
       const mD = {
         name: u, text: v,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -128,11 +155,9 @@
   onChildAdded(query(ref(db, 'messages'), limitToLast(50)), (s) => {
     const k = s.val();
     let cN = k.name ? String(k.name).substring(0, 15) : "Аноним";
-    if (!/^[a-zA-Zа-яА-ЯёЁіІїЇєЄґҐ0-9]+$/.test(cN)) { cN = "Юзер"; }
-
-    // Отправляем пуш, если сообщение не от нас
+    
     if (k.name !== u) {
-        sendPush(cN, k.text);
+        sendPush(cN, k.text, k.replyTo === u);
     }
 
     if (k.date && k.date !== curD) {
@@ -145,7 +170,6 @@
     if (k.name === u) m.classList.add('my-msg');
     
     let rH = k.replyTo ? `<div class="reply-box"><b>${k.replyTo}</b>${k.replyText}</div>` : "";
-    
     m.innerHTML = `${rH}<b>${cN}</b><span></span><i style="display:block; font-size:10px; opacity:0.4; text-align:right; margin-top:2px;">${k.time}</i>`;
     m.querySelector('span').innerText = k.text;
     
