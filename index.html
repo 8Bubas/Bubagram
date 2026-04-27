@@ -10,16 +10,14 @@
         body { font-family: sans-serif; display: flex; flex-direction: column; color: white; }
         #maint-screen { display: none; position: fixed; inset: 0; background: #0b0e14; z-index: 10000; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
         #maint-screen h1 { color: #58a6ff; font-size: 28px; }
-        .top-bar { background: #1c2128; padding: 0 15px; min-height: 50px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; position: relative; }
+        .top-bar { background: #1c2128; padding: 0 15px; min-height: 50px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        #videoBtn { background: #238636; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold; }
         #profileBtn { background: #30363d; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; }
-        
         #floating-date { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); background: rgba(48, 54, 61, 0.8); color: #8b949e; padding: 4px 12px; border-radius: 20px; font-size: 11px; z-index: 100; backdrop-filter: blur(4px); pointer-events: none; opacity: 0; transition: opacity 0.3s; }
-
         #chat-messages { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
         .date-divider { text-align: center; margin: 15px 0; font-size: 12px; color: #8b949e; position: relative; flex-shrink: 0; }
         .date-divider span { background: #0b0e14; padding: 0 10px; position: relative; z-index: 2; }
         .date-divider::after { content: ""; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: #30363d; z-index: 1; }
-        
         .msg-wrapper { display: flex; width: 100%; flex-direction: column; flex-shrink: 0; }
         .msg { max-width: 85%; padding: 8px 12px; border-radius: 16px; font-size: 15px; background: #21262d; align-self: flex-start; border: 1px solid #30363d; cursor: pointer; }
         .msg b { color: #58a6ff; font-size: 11px; display: block; margin-bottom: 2px; }
@@ -27,40 +25,35 @@
         .msg i { font-style: normal; font-size: 10px; opacity: 0.4; display: block; text-align: right; margin-top: 2px; }
         .my-msg-wrapper { align-items: flex-end; }
         .my-msg { background: #30363d; border-color: #484f58; align-self: flex-end; border-bottom-right-radius: 4px; }
-        
         #reply-preview { display: none; background: #1c2128; padding: 8px 15px; border-top: 1px solid #30363d; border-left: 4px solid #58a6ff; position: relative; }
         #reply-preview b { font-size: 12px; color: #58a6ff; display: block; }
         #reply-preview span { font-size: 13px; color: #8b949e; }
         #cancel-reply { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #8b949e; cursor: pointer; font-size: 20px; }
-
-        .input-area { background: #1c2128; padding: 12px 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; align-items: center; flex-shrink: 0; }
+        .input-area { background: #1c2128; padding: 12px 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; align-items: center; flex-shrink: 0; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
         input { flex-grow: 1; padding: 12px 16px; border-radius: 24px; border: 1px solid #30363d; outline: none; background: #0d1117; color: white; font-size: 16px; min-width: 0; }
         #sendBtn { background: none; border: none; color: #58a6ff; font-size: 28px; cursor: pointer; flex-shrink: 0; }
     </style>
 </head>
 <body>
-
 <div id="maint-screen"><h1>ТЕХ ПЕРЕРЫВ</h1><p>Скоро всё появится</p></div>
 <div id="floating-date">Дата</div>
-
-<div class="top-bar"><button id="profileBtn">Профиль</button></div>
+<div class="top-bar">
+    <button id="videoBtn" onclick="window.location.href='video.html'">Видео</button>
+    <button id="profileBtn">Профиль</button>
+</div>
 <div id="chat-messages"></div>
-
 <div id="reply-preview">
     <b id="reply-name">Автор</b>
     <span id="reply-text">Текст</span>
     <div id="cancel-reply">×</div>
 </div>
-
 <div class="input-area">
     <input type="text" id="msgInput" placeholder="Сообщение" maxlength="100" autocomplete="off">
     <button id="sendBtn">➤</button>
 </div>
-
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getDatabase, ref, push, onChildAdded, query, limitToLast, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
   const firebaseConfig = {
     apiKey: "AIzaSyCMgd0KOSCfyJ0RWk3qhpk667C0v0358_c",
     authDomain: "bubaschat.firebaseapp.com",
@@ -70,41 +63,29 @@
     messagingSenderId: "360805253305",
     appId: "1:360805253305:web:6f5ed2c212513f5723b762"
   };
-
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   onValue(ref(db, 'maintenance'), (snap) => { document.getElementById('maint-screen').style.display = snap.val() === true ? 'flex' : 'none'; });
-
   let userName = localStorage.getItem('chat_name') || "Аноним";
   let lastDateLabel = "";
   let currentReply = null;
-
   document.getElementById('profileBtn').onclick = () => {
       const n = prompt("Новый ник:", userName);
       if (n && n.trim()) { userName = n.trim(); localStorage.setItem('chat_name', userName); }
   };
-
   const msgInput = document.getElementById('msgInput');
   const container = document.getElementById('chat-messages');
   const replyPrev = document.getElementById('reply-preview');
   const floatDate = document.getElementById('floating-date');
-
   let dateTimer;
   container.onscroll = () => {
       floatDate.style.opacity = "1";
       clearTimeout(dateTimer);
       dateTimer = setTimeout(() => floatDate.style.opacity = "0", 1500);
-
       const dividers = document.querySelectorAll('.date-divider');
-      dividers.forEach(div => {
-          if (div.offsetTop - container.scrollTop < 100) {
-              floatDate.innerText = div.innerText;
-          }
-      });
+      dividers.forEach(div => { if (div.offsetTop - container.scrollTop < 100) { floatDate.innerText = div.innerText; } });
   };
-
   document.getElementById('cancel-reply').onclick = () => { currentReply = null; replyPrev.style.display = 'none'; };
-
   function send() {
     const t = msgInput.value.trim();
     if (t !== "" && /[a-zA-Zа-яА-Я0-9]/.test(t)) {
@@ -119,10 +100,8 @@
       msgInput.value = ""; currentReply = null; replyPrev.style.display = 'none';
     }
   }
-
   document.getElementById('sendBtn').onclick = send;
   msgInput.onkeypress = (e) => { if(e.key === "Enter") send(); };
-
   onChildAdded(query(ref(db, 'messages'), limitToLast(50)), (snap) => {
     const d = snap.val();
     if (d.date && d.date !== lastDateLabel) {
@@ -133,18 +112,15 @@
     if (d.name === userName) w.classList.add('my-msg-wrapper');
     const m = document.createElement('div'); m.className = 'msg';
     if (d.name === userName) m.classList.add('my-msg');
-    
     let replyHTML = d.replyTo ? `<div class="reply-box"><b>${d.replyTo}</b>${d.replyText}</div>` : "";
     m.innerHTML = `${replyHTML}<b>${d.name}</b><span></span><i>${d.time || ''}</i>`;
     m.querySelector('span').innerText = d.text;
-    
     m.onclick = () => {
         currentReply = { name: d.name, text: d.text };
         document.getElementById('reply-name').innerText = d.name;
         document.getElementById('reply-text').innerText = d.text;
         replyPrev.style.display = 'block'; msgInput.focus();
     };
-
     w.appendChild(m); container.appendChild(w); container.scrollTop = container.scrollHeight;
   });
 </script>
