@@ -3,29 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bubas Stream</title>
+    <title>Bubas SuperApp</title>
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #0b0e14; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; color: white; overflow: hidden; }
-        #chat-messages { flex-grow: 1; padding: 15px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; overflow: hidden; }
+        
+        /* Кнопка обновлений сверху */
+        .top-bar { background: #1c2128; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #30363d; }
+        #logBtn { background: #30363d; color: #8b949e; border: none; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+
+        /* Окно логов (скрыто по умолчанию) */
+        #logModal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1c2128; border: 1px solid #30363d; padding: 20px; border-radius: 12px; z-index: 1000; width: 80%; max-width: 400px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        #logModal h3 { margin-top: 0; color: #58a6ff; }
+        #logModal ul { padding-left: 20px; font-size: 14px; line-height: 1.6; }
+        #closeLog { background: #238636; color: white; border: none; width: 100%; padding: 10px; border-radius: 8px; margin-top: 10px; cursor: pointer; }
+
+        #chat-messages { flex-grow: 1; padding: 15px; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; overflow: hidden; }
         .msg-wrapper { display: flex; width: 100%; flex-direction: column; animation: fadeIn 0.2s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        .msg { max-width: 85%; padding: 12px 16px; border-radius: 18px; font-size: 18px; line-height: 1.4; word-wrap: break-word; background: #30363d; align-self: flex-start; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .msg { max-width: 85%; padding: 10px 14px; border-radius: 15px; font-size: 16px; background: #30363d; align-self: flex-start; }
+        .msg b { color: #58a6ff; font-size: 13px; display: block; margin-bottom: 2px; }
         .my-msg-wrapper { align-items: flex-end; }
-        .my-msg { background: #238636; align-self: flex-end; }
+        .my-msg { background: #238636; align-self: flex-end; border-bottom-right-radius: 2px; }
+        
         .input-area { background: #1c2128; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; }
-        input { flex-grow: 1; padding: 15px; border-radius: 12px; border: none; outline: none; background: #0d1117; color: white; font-size: 18px; }
-        button { background: #238636; color: white; border: none; padding: 0 20px; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 14px; text-transform: uppercase; }
-        button:active { background: #2ea043; transform: scale(0.95); }
+        input { flex-grow: 1; padding: 12px; border-radius: 10px; border: none; outline: none; background: #0d1117; color: white; font-size: 16px; }
+        button#sendBtn { background: #238636; color: white; border: none; padding: 0 15px; border-radius: 10px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
+<div class="top-bar">
+    <span>BubasChat <b>v1.2</b></span>
+    <button id="logBtn">ЧТО НОВОГО?</button>
+</div>
+
+<div id="logModal">
+    <h3>Обновление v1.2</h3>
+    <ul>
+        <li>Введена система никнеймов 🏷️</li>
+        <li>Защита от спама (макс. 100 симв.) 🛡️</li>
+        <li>Цветные сообщения и авто-скролл 🎨</li>
+        <li>Исправлен «понос из букв» 💩</li>
+    </ul>
+    <button id="closeLog">ПОНЯТНО</button>
+</div>
+
 <div id="chat-messages"></div>
 
 <div class="input-area">
-    <input type="text" id="msgInput" placeholder="Пиши сюда..." autocomplete="off">
-    <button id="sendBtn">ОТПРАВИТЬ</button>
+    <input type="text" id="msgInput" placeholder="Сообщение..." maxlength="100" autocomplete="off">
+    <button id="sendBtn">➤</button>
 </div>
 
 <script type="module">
@@ -46,6 +74,17 @@
   const db = getDatabase(app);
   const messagesRef = ref(db, 'messages');
 
+  // Работа с модальным окном
+  const logBtn = document.getElementById('logBtn');
+  const logModal = document.getElementById('logModal');
+  const closeLog = document.getElementById('closeLog');
+
+  logBtn.onclick = () => logModal.style.display = 'block';
+  closeLog.onclick = () => logModal.style.display = 'none';
+
+  let userName = localStorage.getItem('chat_name') || prompt("Твой ник:") || "Аноним";
+  localStorage.setItem('chat_name', userName);
+
   const input = document.getElementById('msgInput');
   const btn = document.getElementById('sendBtn');
   const container = document.getElementById('chat-messages');
@@ -53,7 +92,7 @@
   function sendToDB() {
     const text = input.value.trim();
     if (text !== "") {
-      push(messagesRef, { text: text });
+      push(messagesRef, { name: userName, text: text });
       input.value = "";
     }
   }
@@ -65,22 +104,19 @@
 
   onChildAdded(lastMessagesQuery, (snapshot) => {
     const data = snapshot.val();
-    renderMessage(data.text);
+    renderMessage(data.name, data.text);
   });
 
-  function renderMessage(text) {
+  function renderMessage(name, text) {
     const wrapper = document.createElement('div');
     wrapper.className = 'msg-wrapper';
+    if (name === userName) wrapper.classList.add('my-msg-wrapper');
+
     const div = document.createElement('div');
     div.className = 'msg';
+    if (name === userName) div.classList.add('my-msg');
     
-    if (text.startsWith('!')) {
-        wrapper.classList.add('my-msg-wrapper');
-        div.classList.add('my-msg');
-        div.innerText = text.substring(1);
-    } else {
-        div.innerText = text;
-    }
+    div.innerHTML = `<b>${name}</b>${text}`;
     
     wrapper.appendChild(div);
     container.appendChild(wrapper);
