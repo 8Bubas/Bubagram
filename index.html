@@ -10,12 +10,16 @@
         body { font-family: sans-serif; display: flex; flex-direction: column; color: white; }
         #maint-screen { display: none; position: fixed; inset: 0; background: #0b0e14; z-index: 10000; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
         #maint-screen h1 { color: #58a6ff; font-size: 28px; }
-        .top-bar { background: #1c2128; padding: 0 15px; min-height: 50px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; }
+        .top-bar { background: #1c2128; padding: 0 15px; min-height: 50px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; position: relative; }
         #profileBtn { background: #30363d; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+        
+        #floating-date { position: absolute; left: 50%; top: 60px; transform: translateX(-50%); background: rgba(48, 54, 61, 0.8); color: #8b949e; padding: 4px 12px; border-radius: 20px; font-size: 11px; z-index: 100; backdrop-filter: blur(4px); pointer-events: none; opacity: 0; transition: opacity 0.3s; }
+
         #chat-messages { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
         .date-divider { text-align: center; margin: 15px 0; font-size: 12px; color: #8b949e; position: relative; flex-shrink: 0; }
         .date-divider span { background: #0b0e14; padding: 0 10px; position: relative; z-index: 2; }
         .date-divider::after { content: ""; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: #30363d; z-index: 1; }
+        
         .msg-wrapper { display: flex; width: 100%; flex-direction: column; flex-shrink: 0; }
         .msg { max-width: 85%; padding: 8px 12px; border-radius: 16px; font-size: 15px; background: #21262d; align-self: flex-start; border: 1px solid #30363d; cursor: pointer; }
         .msg b { color: #58a6ff; font-size: 11px; display: block; margin-bottom: 2px; }
@@ -37,6 +41,7 @@
 <body>
 
 <div id="maint-screen"><h1>ТЕХ ПЕРЕРЫВ</h1><p>Скоро всё появится</p></div>
+<div id="floating-date">Дата</div>
 
 <div class="top-bar"><button id="profileBtn">Профиль</button></div>
 <div id="chat-messages"></div>
@@ -82,6 +87,21 @@
   const msgInput = document.getElementById('msgInput');
   const container = document.getElementById('chat-messages');
   const replyPrev = document.getElementById('reply-preview');
+  const floatDate = document.getElementById('floating-date');
+
+  let dateTimer;
+  container.onscroll = () => {
+      floatDate.style.opacity = "1";
+      clearTimeout(dateTimer);
+      dateTimer = setTimeout(() => floatDate.style.opacity = "0", 1500);
+
+      const dividers = document.querySelectorAll('.date-divider');
+      dividers.forEach(div => {
+          if (div.offsetTop - container.scrollTop < 100) {
+              floatDate.innerText = div.innerText;
+          }
+      });
+  };
 
   document.getElementById('cancel-reply').onclick = () => { currentReply = null; replyPrev.style.display = 'none'; };
 
@@ -96,9 +116,7 @@
       };
       if (currentReply) { msgData.replyTo = currentReply.name; msgData.replyText = currentReply.text; }
       push(ref(db, 'messages'), msgData);
-      msgInput.value = "";
-      currentReply = null;
-      replyPrev.style.display = 'none';
+      msgInput.value = ""; currentReply = null; replyPrev.style.display = 'none';
     }
   }
 
@@ -124,8 +142,7 @@
         currentReply = { name: d.name, text: d.text };
         document.getElementById('reply-name').innerText = d.name;
         document.getElementById('reply-text').innerText = d.text;
-        replyPrev.style.display = 'block';
-        msgInput.focus();
+        replyPrev.style.display = 'block'; msgInput.focus();
     };
 
     w.appendChild(m); container.appendChild(w); container.scrollTop = container.scrollHeight;
