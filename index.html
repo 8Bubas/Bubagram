@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Украинский MAX</title>
     <style>
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body { height: 100%; margin: 0; padding: 0; background: #0b0e14; overflow: hidden; }
         body { font-family: sans-serif; display: flex; flex-direction: column; color: white; }
         #m-s { display: none; position: fixed; inset: 0; background: #0b0e14; z-index: 10000; flex-direction: column; justify-content: center; align-items: center; }
@@ -16,11 +16,18 @@
         .date-divider span { background: #0b0e14; padding: 0 10px; position: relative; z-index: 2; }
         .date-divider::after { content: ""; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: #30363d; z-index: 1; }
         .msg-wrapper { display: flex; width: 100%; flex-direction: column; flex-shrink: 0; }
-        .msg { max-width: 85%; padding: 8px 12px; border-radius: 16px; font-size: 15px; background: #21262d; align-self: flex-start; border: 1px solid #30363d; cursor: pointer; white-space: pre-wrap; word-break: break-word; }
+        .msg { max-width: 85%; padding: 8px 12px; border-radius: 16px; font-size: 15px; background: #21262d; align-self: flex-start; border: 1px solid #30363d; cursor: pointer; white-space: pre-wrap; word-break: break-word; user-select: none; position: relative; }
         .msg b { color: #58a6ff; font-size: 11px; display: block; margin-bottom: 2px; }
         .reply-box { background: rgba(88, 166, 255, 0.1); border-left: 3px solid #58a6ff; padding: 4px 8px; margin-bottom: 5px; border-radius: 4px; font-size: 13px; color: #8b949e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .my-msg-wrapper { align-items: flex-end; }
         .my-msg { background: #30363d; border-color: #484f58; align-self: flex-end; border-bottom-right-radius: 4px; }
+        
+        #action-menu { display: none; position: fixed; background: #1c2128; border: 1px solid #30363d; border-radius: 12px; z-index: 30000; min-width: 160px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.6); }
+        .action-item { padding: 14px 16px; font-size: 15px; cursor: pointer; border-bottom: 1px solid #30363d; transition: background 0.1s; }
+        .action-item:last-child { border-bottom: none; }
+        .action-item:active { background: #30363d; }
+        .action-item.del { color: #f85149; }
+
         #reply-preview { display: none; background: #1c2128; padding: 8px 15px; border-top: 1px solid #30363d; border-left: 4px solid #58a6ff; position: relative; }
         #reply-preview b { font-size: 12px; color: #58a6ff; display: block; }
         #reply-preview span { font-size: 13px; color: #8b949e; }
@@ -41,6 +48,12 @@
 <body>
 <div id="m-s"><h1>ТЕХ ПЕРЕРЫВ</h1></div>
 <div class="top-bar"><button id="profileBtn">Настройки</button></div>
+
+<div id="action-menu">
+    <div class="action-item" id="act-reply">Ответить</div>
+    <div class="action-item" id="act-copy">Копировать</div>
+    <div class="action-item del" id="act-del">Удалить у себя</div>
+</div>
 
 <div id="settings-modal">
     <div class="settings-content">
@@ -84,21 +97,19 @@
   let u = localStorage.getItem('chat_name') || "Аноним";
   let curD = "";
   let rep = null;
+  let activeMsg = null;
 
   const modal = document.getElementById('settings-modal');
-  const setName = document.getElementById('set-name');
+  const actionMenu = document.getElementById('action-menu');
 
   document.getElementById('profileBtn').onclick = () => {
-      setName.value = u;
+      document.getElementById('set-name').value = u;
       modal.style.display = 'flex';
   };
 
   document.getElementById('saveSettings').onclick = () => {
-      const n = setName.value.trim().substring(0, 15);
-      if (n.length >= 1 && /^[a-zA-Zа-яА-ЯёЁіІїЇєЄґҐ0-9]+$/.test(n)) {
-          u = n;
-          localStorage.setItem('chat_name', u);
-      }
+      const n = document.getElementById('set-name').value.trim().substring(0, 15);
+      if (n.length >= 1) { u = n; localStorage.setItem('chat_name', u); }
       modal.style.display = 'none';
   };
 
@@ -110,7 +121,7 @@
 
   function _s() {
     const v = inp.value.trim();
-    if (v !== "" && v.length <= 100) {
+    if (v !== "") {
       const mD = {
         name: u, text: v,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -125,10 +136,22 @@
   document.getElementById('sendBtn').onclick = _s;
   inp.onkeypress = (e) => { if(e.key === "Enter") _s(); };
 
+  document.addEventListener('click', () => { actionMenu.style.display = 'none'; });
+
+  document.getElementById('act-copy').onclick = () => { if (activeMsg) navigator.clipboard.writeText(activeMsg.text); };
+  document.getElementById('act-reply').onclick = () => {
+      if (activeMsg) {
+          rep = { name: activeMsg.name, text: activeMsg.text };
+          document.getElementById('r-n').innerText = activeMsg.name;
+          document.getElementById('r-t').innerText = activeMsg.text;
+          pre.style.display = 'block'; inp.focus();
+      }
+  };
+  document.getElementById('act-del').onclick = () => { if (activeMsg) activeMsg.el.style.display = 'none'; };
+
   onChildAdded(query(ref(db, 'messages'), limitToLast(50)), (s) => {
     const k = s.val();
-    let cN = k.name ? String(k.name).substring(0, 15) : "Аноним";
-
+    let cN = k.name || "Аноним";
     if (k.date && k.date !== curD) {
         const h = document.createElement('div'); h.className = 'date-divider';
         h.innerHTML = `<span>${k.date}</span>`; box.appendChild(h); curD = k.date;
@@ -142,7 +165,25 @@
     m.innerHTML = `${rH}<b>${cN}</b><span></span><i style="display:block; font-size:10px; opacity:0.4; text-align:right; margin-top:2px;">${k.time}</i>`;
     m.querySelector('span').innerText = k.text;
     
+    let timer;
+    const start = (e) => {
+        timer = setTimeout(() => {
+            activeMsg = { name: cN, text: k.text, el: w };
+            const t = e.touches ? e.touches[0] : e;
+            // Показываем "Удалить" только если сообщение моё
+            document.getElementById('act-del').style.display = (k.name === u) ? 'block' : 'none';
+            actionMenu.style.top = t.clientY + 'px';
+            actionMenu.style.left = Math.min(t.clientX, window.innerWidth - 170) + 'px';
+            actionMenu.style.display = 'block';
+        }, 500);
+    };
+    m.addEventListener('touchstart', start);
+    m.addEventListener('touchend', () => clearTimeout(timer));
+    m.addEventListener('mousedown', start);
+    m.addEventListener('mouseup', () => clearTimeout(timer));
+
     m.onclick = () => {
+        if (actionMenu.style.display === 'block') return;
         rep = { name: cN, text: k.text };
         document.getElementById('r-n').innerText = cN;
         document.getElementById('r-t').innerText = k.text;
