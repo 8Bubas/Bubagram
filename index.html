@@ -3,20 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bubas Chat</title>
+    <title>Bubas Chat Slow</title>
     <style>
         body { margin: 0; overflow: hidden; background: #0b0e14; font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; }
         #chat-area { flex-grow: 1; position: relative; }
-        .bubble { position: absolute; bottom: 0; padding: 10px 15px; border-radius: 20px; color: white; font-weight: bold; font-size: 18px; white-space: nowrap; animation: flyUp 4s linear forwards; box-shadow: 0 4px 15px rgba(0,0,0,0.3); opacity: 0.9; }
-        @keyframes flyUp {
-            0% { transform: translateY(0) scale(0.5); opacity: 0; }
-            10% { opacity: 1; transform: translateY(-50px) scale(1); }
-            100% { transform: translateY(-90vh) scale(1.1); opacity: 0; }
+        
+        .bubble { 
+            position: absolute; 
+            bottom: -50px; 
+            padding: 12px 18px; 
+            border-radius: 20px; 
+            color: white; 
+            font-weight: bold; 
+            font-size: 18px; 
+            white-space: nowrap; 
+            /* Время полета — 20 секунд */
+            animation: flyUp 20s linear forwards; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
         }
-        .input-area { background: #1c2128; padding: 20px; display: flex; gap: 10px; border-top: 2px solid #30363d; }
+
+        @keyframes flyUp {
+            0% { transform: translateY(0); opacity: 0; }
+            5% { opacity: 1; } /* Быстрое появление */
+            80% { opacity: 1; } /* Долго держится видимым */
+            100% { transform: translateY(-95vh); opacity: 0; } /* Улетает вверх и гаснет */
+        }
+
+        .input-area { background: #1c2128; padding: 20px; display: flex; gap: 10px; border-top: 2px solid #30363d; z-index: 10; }
         input { flex-grow: 1; padding: 12px; border-radius: 10px; border: none; outline: none; background: #0d1117; color: white; font-size: 16px; }
         button { background: #238636; color: white; border: none; padding: 0 20px; border-radius: 10px; cursor: pointer; font-weight: bold; }
-        /* Цвета для своих и чужих */
+        
         .friend { background: linear-gradient(135deg, #2ea043, #56d364); border: 2px solid #7eff8b; }
         .neutral { background: linear-gradient(135deg, #30363d, #484f58); border: 1px solid #8b949e; }
     </style>
@@ -37,7 +53,6 @@
     function sendMsg() {
         const text = input.value.trim();
         if (text === "") return;
-
         createBubble(text);
         input.value = "";
     }
@@ -47,24 +62,21 @@
         b.innerText = text;
         b.className = 'bubble';
         
-        // Логика символа "!"
         if (text.startsWith('!')) {
             b.classList.add('friend');
         } else {
             b.classList.add('neutral');
         }
 
-        // Рандомное место по горизонтали
         const randomX = Math.floor(Math.random() * (window.innerWidth - 150));
         b.style.left = randomX + 'px';
 
         area.appendChild(b);
 
-        // Удаляем элемент из памяти после анимации
-        setTimeout(() => { b.remove(); }, 4000);
+        // Удаляем из кода через 25 секунд (чуть позже завершения анимации)
+        setTimeout(() => { b.remove(); }, 25000);
     }
 
-    // Отправка по Enter
     input.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMsg(); });
 </script>
 
