@@ -3,37 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bubas Chat Slow</title>
+    <title>Bubas Chat Ultra Slow</title>
     <style>
         body { margin: 0; overflow: hidden; background: #0b0e14; font-family: 'Segoe UI', sans-serif; height: 100vh; display: flex; flex-direction: column; }
-        #chat-area { flex-grow: 1; position: relative; }
+        #chat-area { flex-grow: 1; position: relative; perspective: 1000px; }
         
         .bubble { 
             position: absolute; 
-            bottom: -50px; 
-            padding: 12px 18px; 
-            border-radius: 20px; 
+            bottom: -60px; 
+            padding: 14px 20px; 
+            border-radius: 25px; 
             color: white; 
             font-weight: bold; 
             font-size: 18px; 
             white-space: nowrap; 
-            /* Время полета — 20 секунд */
-            animation: flyUp 20s linear forwards; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+            /* Время полета — 35 секунд! */
+            animation: flyUp 35s ease-in-out forwards; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); 
+            pointer-events: none;
         }
 
         @keyframes flyUp {
-            0% { transform: translateY(0); opacity: 0; }
-            5% { opacity: 1; } /* Быстрое появление */
-            80% { opacity: 1; } /* Долго держится видимым */
-            100% { transform: translateY(-95vh); opacity: 0; } /* Улетает вверх и гаснет */
+            0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+            5% { opacity: 1; }
+            /* Эффект покачивания влево-вправо во время подъема */
+            25% { transform: translateY(-25vh) translateX(20px) rotate(2deg); }
+            50% { transform: translateY(-50vh) translateX(-20px) rotate(-2deg); }
+            75% { transform: translateY(-75vh) translateX(20px) rotate(1deg); }
+            90% { opacity: 1; }
+            100% { transform: translateY(-105vh) translateX(0) rotate(0); opacity: 0; }
         }
 
-        .input-area { background: #1c2128; padding: 20px; display: flex; gap: 10px; border-top: 2px solid #30363d; z-index: 10; }
-        input { flex-grow: 1; padding: 12px; border-radius: 10px; border: none; outline: none; background: #0d1117; color: white; font-size: 16px; }
-        button { background: #238636; color: white; border: none; padding: 0 20px; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        .input-area { background: #1c2128; padding: 25px; display: flex; gap: 10px; border-top: 2px solid #30363d; z-index: 100; }
+        input { flex-grow: 1; padding: 15px; border-radius: 12px; border: none; outline: none; background: #0d1117; color: white; font-size: 18px; }
+        button { background: #238636; color: white; border: none; padding: 0 25px; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 16px; }
         
-        .friend { background: linear-gradient(135deg, #2ea043, #56d364); border: 2px solid #7eff8b; }
+        .friend { background: linear-gradient(135deg, #2ea043, #56d364); border: 2px solid #7eff8b; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .neutral { background: linear-gradient(135deg, #30363d, #484f58); border: 1px solid #8b949e; }
     </style>
 </head>
@@ -68,13 +73,14 @@
             b.classList.add('neutral');
         }
 
-        const randomX = Math.floor(Math.random() * (window.innerWidth - 150));
+        // Чтобы не вылетало за края экрана
+        const randomX = Math.floor(Math.random() * (window.innerWidth - 200)) + 20;
         b.style.left = randomX + 'px';
 
         area.appendChild(b);
 
-        // Удаляем из кода через 25 секунд (чуть позже завершения анимации)
-        setTimeout(() => { b.remove(); }, 25000);
+        // Удаляем через 36 секунд
+        setTimeout(() => { b.remove(); }, 36000);
     }
 
     input.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMsg(); });
