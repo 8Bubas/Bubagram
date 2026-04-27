@@ -17,9 +17,14 @@
         .date-divider::after { content: ""; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: #30363d; z-index: 1; }
         .msg-wrapper { display: flex; width: 100%; flex-direction: column; flex-shrink: 0; }
         .msg { max-width: 85%; padding: 8px 12px; border-radius: 16px; font-size: 15px; background: #21262d; align-self: flex-start; border: 1px solid #30363d; cursor: pointer; white-space: pre-wrap; word-break: break-word; }
-        .msg b { color: #58a6ff; font-size: 11px; display: block; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .msg b { color: #58a6ff; font-size: 11px; display: block; margin-bottom: 2px; }
+        .reply-box { background: rgba(88, 166, 255, 0.1); border-left: 3px solid #58a6ff; padding: 4px 8px; margin-bottom: 5px; border-radius: 4px; font-size: 13px; color: #8b949e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .my-msg-wrapper { align-items: flex-end; }
         .my-msg { background: #30363d; border-color: #484f58; align-self: flex-end; border-bottom-right-radius: 4px; }
+        #reply-preview { display: none; background: #1c2128; padding: 8px 15px; border-top: 1px solid #30363d; border-left: 4px solid #58a6ff; position: relative; }
+        #reply-preview b { font-size: 12px; color: #58a6ff; display: block; }
+        #reply-preview span { font-size: 13px; color: #8b949e; }
+        #cancel-reply { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #8b949e; cursor: pointer; font-size: 20px; }
         .input-area { background: #1c2128; padding: 12px 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; align-items: center; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
         input { flex-grow: 1; padding: 12px 16px; border-radius: 24px; border: 1px solid #30363d; outline: none; background: #0d1117; color: white; font-size: 16px; }
         #sendBtn { background: none; border: none; color: #58a6ff; font-size: 28px; cursor: pointer; }
@@ -29,6 +34,7 @@
 <div id="m-s"><h1>ТЕХ ПЕРЕРЫВ</h1></div>
 <div class="top-bar"><button id="profileBtn">Профиль</button></div>
 <div id="chat-messages"></div>
+<div id="reply-preview"><b id="r-n"></b><span id="r-t"></span><div id="cancel-reply">×</div></div>
 <div class="input-area">
     <input type="text" id="m-i" placeholder="Сообщение" maxlength="100" autocomplete="off">
     <button id="sendBtn">➤</button>
@@ -57,9 +63,10 @@
 
   let u = localStorage.getItem('chat_name') || "Аноним";
   let curD = "";
+  let rep = null;
 
   document.getElementById('profileBtn').onclick = () => {
-      const n = prompt("Ник (10 симв, только буквы/цифры):", u);
+      const n = prompt("Ник:", u);
       if (n) {
           const cl = n.trim().substring(0, 10);
           const ok = (cl.match(/[a-zA-Zа-яА-ЯёЁіІїЇєЄґҐ0-9]/g) || []).length;
@@ -72,17 +79,22 @@
 
   const inp = document.getElementById('m-i');
   const box = document.getElementById('chat-messages');
+  const pre = document.getElementById('reply-preview');
+
+  document.getElementById('cancel-reply').onclick = () => { rep = null; pre.style.display = 'none'; };
 
   function _s() {
     const v = inp.value.trim();
     const x = (v.match(/[a-zA-Zа-яА-ЯёЁіІїЇєЄґҐ0-9]/g) || []).length;
     if (v !== "" && v.length <= 100 && x >= 2 && (x / v.length > 0.3)) {
-      push(ref(db, 'messages'), {
+      const mD = {
         name: u, text: v,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         date: new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
-      });
-      inp.value = "";
+      };
+      if (rep) { mD.replyTo = rep.name; mD.replyText = rep.text; }
+      push(ref(db, 'messages'), mD);
+      inp.value = ""; rep = null; pre.style.display = 'none';
     }
   }
 
@@ -91,6 +103,9 @@
 
   onChildAdded(query(ref(db, 'messages'), limitToLast(50)), (s) => {
     const k = s.val();
+    let cN = k.name ? String(k.name).substring(0, 10) : "Аноним";
+    if (!/^[a-zA-Zа-яА-ЯёЁіІїЇєЄґҐ0-9]+$/.test(cN)) { cN = "Юзер"; }
+
     if (k.date && k.date !== curD) {
         const h = document.createElement('div'); h.className = 'date-divider';
         h.innerHTML = `<span>${k.date}</span>`; box.appendChild(h); curD = k.date;
@@ -99,8 +114,19 @@
     if (k.name === u) w.classList.add('my-msg-wrapper');
     const m = document.createElement('div'); m.className = 'msg';
     if (k.name === u) m.classList.add('my-msg');
-    m.innerHTML = `<b>${k.name}</b><span></span><i style="display:block; font-size:10px; opacity:0.4; text-align:right; margin-top:2px;">${k.time}</i>`;
+    
+    let rH = k.replyTo ? `<div class="reply-box"><b>${k.replyTo}</b>${k.replyText}</div>` : "";
+    
+    m.innerHTML = `${rH}<b>${cN}</b><span></span><i style="display:block; font-size:10px; opacity:0.4; text-align:right; margin-top:2px;">${k.time}</i>`;
     m.querySelector('span').innerText = k.text;
+    
+    m.onclick = () => {
+        rep = { name: cN, text: k.text };
+        document.getElementById('r-n').innerText = cN;
+        document.getElementById('r-t').innerText = k.text;
+        pre.style.display = 'block'; inp.focus();
+    };
+    
     w.appendChild(m); box.appendChild(w); box.scrollTop = box.scrollHeight;
   });
 </script>
