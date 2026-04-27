@@ -3,58 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bubas Chat</title>
+    <title>Bubas Stream</title>
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; background: #0b0e14; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; height: 100vh; display: flex; flex-direction: column; color: white; }
+        body { margin: 0; background: #0b0e14; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; color: white; overflow: hidden; }
         
-        .header { padding: 15px; background: #1c2128; text-align: center; font-weight: bold; border-bottom: 1px solid #30363d; font-size: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .header { padding: 10px; background: #1c2128; text-align: center; border-bottom: 1px solid #30363d; font-size: 16px; color: #8b949e; }
 
-        /* Контейнер для сообщений */
-        #chat-messages { flex-grow: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; scroll-behavior: smooth; }
+        /* Контейнер БЕЗ СКРОЛЛА */
+        #chat-messages { 
+            flex-grow: 1; 
+            padding: 15px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: flex-end; /* Сообщения всегда прижаты к низу */
+            gap: 10px; 
+            overflow: hidden; /* Запрещаем крутить назад */
+        }
 
-        /* Стиль отдельного сообщения */
-        .msg-wrapper { display: flex; width: 100%; flex-direction: column; }
+        .msg-wrapper { display: flex; width: 100%; flex-direction: column; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
         .msg { 
             max-width: 85%; 
-            padding: 10px 14px; 
-            border-radius: 15px; 
-            font-size: 16px; 
+            padding: 12px 16px; 
+            border-radius: 18px; 
+            font-size: 18px; 
             line-height: 1.4; 
             word-wrap: break-word; 
             background: #30363d; 
-            color: #e6edf3;
             align-self: flex-start;
-            border-bottom-left-radius: 2px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
-        /* Твои сообщения (если начинаются с !) */
         .my-msg-wrapper { align-items: flex-end; }
-        .my-msg { 
-            background: #238636; 
-            color: white; 
-            align-self: flex-end; 
-            border-bottom-left-radius: 15px;
-            border-bottom-right-radius: 2px;
-        }
+        .my-msg { background: #238636; align-self: flex-end; }
 
-        /* Поле ввода */
         .input-area { background: #1c2128; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; }
-        input { flex-grow: 1; padding: 12px 18px; border-radius: 25px; border: 1px solid #30363d; outline: none; background: #0d1117; color: white; font-size: 16px; }
-        input:focus { border-color: #58a6ff; }
-        button { background: #238636; color: white; border: none; padding: 0 22px; border-radius: 25px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        button:hover { background: #2ea043; }
+        input { flex-grow: 1; padding: 12px 18px; border-radius: 25px; border: none; outline: none; background: #0d1117; color: white; font-size: 18px; }
+        button { background: #238636; color: white; border: none; padding: 0 25px; border-radius: 25px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="header">BubasChat Online</div>
+<div class="header">История не сохраняется. Только то, что сейчас.</div>
 <div id="chat-messages"></div>
 
 <div class="input-area">
-    <input type="text" id="msgInput" placeholder="Введите сообщение..." autocomplete="off">
-    <button id="sendBtn">SEND</button>
+    <input type="text" id="msgInput" placeholder="Напиши что-нибудь..." autocomplete="off">
+    <button id="sendBtn">➤</button>
 </div>
 
 <script type="module">
@@ -82,7 +79,7 @@
   function sendToDB() {
     const text = input.value.trim();
     if (text !== "") {
-      push(messagesRef, { text: text, timestamp: Date.now() });
+      push(messagesRef, { text: text });
       input.value = "";
     }
   }
@@ -90,5 +87,37 @@
   btn.onclick = sendToDB;
   input.onkeypress = (e) => { if(e.key === "Enter") sendToDB(); };
 
-  // Берем последние 100
+  // Загружаем только последние 15 сообщений, чтобы экран не был перегружен старьем при входе
+  const lastMessagesQuery = query(messagesRef, limitToLast(15));
+
+  onChildAdded(lastMessagesQuery, (snapshot) => {
+    const data = snapshot.val();
+    renderMessage(data.text);
+  });
+
+  function renderMessage(text) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'msg-wrapper';
     
+    const div = document.createElement('div');
+    div.className = 'msg';
+    
+    if (text.startsWith('!')) {
+        wrapper.classList.add('my-msg-wrapper');
+        div.classList.add('my-msg');
+        div.innerText = text.substring(1);
+    } else {
+        div.innerText = text;
+    }
+    
+    wrapper.appendChild(div);
+    container.appendChild(wrapper);
+
+    // Если сообщений стало слишком много (больше 20), удаляем самое верхнее из DOM, чтобы не жрало память
+    if (container.children.length > 20) {
+        container.removeChild(container.firstChild);
+    }
+  }
+</script>
+</body>
+</html>
