@@ -43,8 +43,7 @@
         .setting-item label { display: block; font-size: 14px; color: #8b949e; margin-bottom: 5px; }
         .settings-content input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: white; outline: none; }
         #saveSettings { width: 100%; background: #58a6ff; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
-
-        #toast { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #f85149; color: white; padding: 10px 20px; border-radius: 8px; z-index: 40000; font-size: 14px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        #toast { display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #f85149; color: white; padding: 10px 20px; border-radius: 8px; z-index: 40000; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -109,9 +108,6 @@
 
   const modal = document.getElementById('settings-modal');
   const actionMenu = document.getElementById('action-menu');
-  const inp = document.getElementById('m-i');
-  const box = document.getElementById('chat-messages');
-  const pre = document.getElementById('reply-preview');
   const toast = document.getElementById('toast');
 
   function showToast(txt) {
@@ -127,37 +123,40 @@
   };
 
   document.getElementById('saveSettings').onclick = async () => {
-      const newN = document.getElementById('set-name').value.trim().substring(0, 15);
-      const newP = document.getElementById('set-pass').value.trim().substring(0, 4);
+      const newN = document.getElementById('set-name').value.trim();
+      const newP = document.getElementById('set-pass').value.trim();
 
       if (newN.length < 1 || newP.length < 4) {
-          showToast("Введи никнейм и пароль из 4 цифр");
+          showToast("Нужен ник и 4 цифры пароля");
           return;
       }
 
-      if (newN !== u) {
-          const nickRef = ref(db, `active_nicks/${newN}`);
-          const snap = await get(nickRef);
+      const nickRef = ref(db, `active_nicks/${newN}`);
+      const snap = await get(nickRef);
 
-          if (snap.exists() && snap.val() !== newP) {
-              showToast("Ник занят");
-              return;
-          }
-
-          if (u !== "Аноним") {
-              remove(ref(db, `active_nicks/${u}`));
-          }
-          set(nickRef, newP);
-      } else {
-          set(ref(db, `active_nicks/${u}`), newP);
+      if (snap.exists() && snap.val() !== newP) {
+          showToast("Ник занят");
+          return;
       }
 
-      u = newN;
-      p = newP;
-      localStorage.setItem('chat_name', u);
-      localStorage.setItem('chat_pass', p);
-      modal.style.display = 'none';
+      if (u !== newN && u !== "Аноним") {
+          remove(ref(db, `active_nicks/${u}`));
+      }
+
+      set(nickRef, newP).then(() => {
+          u = newN;
+          p = newP;
+          localStorage.setItem('chat_name', u);
+          localStorage.setItem('chat_pass', p);
+          modal.style.display = 'none';
+      }).catch(e => {
+          showToast("Ошибка базы данных");
+      });
   };
+
+  const inp = document.getElementById('m-i');
+  const box = document.getElementById('chat-messages');
+  const pre = document.getElementById('reply-preview');
 
   document.getElementById('cancel-reply').onclick = () => { rep = null; pre.style.display = 'none'; };
 
@@ -189,7 +188,6 @@
           pre.style.display = 'block'; inp.focus();
       }
   };
-
   document.getElementById('act-del').onclick = () => {
       if (activeMsg && activeMsg.id && activeMsg.name === u) {
           remove(ref(db, `messages/${activeMsg.id}`));
