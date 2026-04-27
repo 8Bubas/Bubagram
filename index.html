@@ -3,29 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat</title>
+    <title>Bubas Chat</title>
     <style>
         * { box-sizing: border-box; }
         body { margin: 0; background: #0b0e14; font-family: sans-serif; height: 100vh; display: flex; flex-direction: column; color: white; overflow: hidden; }
         #maint-screen { display: none; position: fixed; inset: 0; background: #0b0e14; z-index: 10000; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
         #maint-screen h1 { color: #58a6ff; font-size: 28px; }
-        .top-bar { background: #1c2128; padding: 0 15px; height: 50px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: flex-end; }
+        .top-bar { background: #1c2128; padding: 0 15px; height: 50px; border-bottom: 1px solid #30363d; display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; }
         #profileBtn { background: #30363d; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; }
         #chat-messages { flex-grow: 1; padding: 15px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scroll-behavior: smooth; }
-        .date-divider { text-align: center; margin: 15px 0; font-size: 12px; color: #8b949e; position: relative; }
+        .date-divider { text-align: center; margin: 15px 0; font-size: 12px; color: #8b949e; position: relative; flex-shrink: 0; }
         .date-divider span { background: #0b0e14; padding: 0 10px; position: relative; z-index: 2; }
         .date-divider::after { content: ""; position: absolute; top: 50%; left: 0; width: 100%; height: 1px; background: #30363d; z-index: 1; }
-        .msg-wrapper { display: flex; width: 100%; flex-direction: column; }
+        .msg-wrapper { display: flex; width: 100%; flex-direction: column; flex-shrink: 0; }
         .msg { max-width: 85%; padding: 8px 12px; border-radius: 16px; font-size: 15px; background: #21262d; align-self: flex-start; border: 1px solid #30363d; position: relative; }
         .msg b { color: #58a6ff; font-size: 11px; display: block; margin-bottom: 2px; }
         .msg i { font-style: normal; font-size: 10px; opacity: 0.4; display: block; text-align: right; margin-top: 2px; }
         .my-msg-wrapper { align-items: flex-end; }
         .my-msg { background: #30363d; border-color: #484f58; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .input-area { background: #1c2128; padding: 12px 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; align-items: center; }
-        input { flex-grow: 1; padding: 12px 16px; border-radius: 24px; border: 1px solid #30363d; outline: none; background: #0d1117; color: white; font-size: 16px; }
+        .input-area { background: #1c2128; padding: 12px 15px; display: flex; gap: 10px; border-top: 1px solid #30363d; align-items: center; flex-shrink: 0; }
+        input { flex-grow: 1; padding: 12px 16px; border-radius: 24px; border: 1px solid #30363d; outline: none; background: #0d1117; color: white; font-size: 16px; width: 100%; }
         input::placeholder { color: #8b949e; opacity: 0.5; }
-        #sendBtn { background: none; border: none; color: #58a6ff; font-size: 28px; cursor: pointer; padding: 0; display: flex; align-items: center; transition: transform 0.1s; }
-        #sendBtn:active { transform: scale(0.9); }
+        #sendBtn { background: none; border: none; color: #58a6ff; font-size: 28px; cursor: pointer; padding: 0; display: flex; align-items: center; }
     </style>
 </head>
 <body>
@@ -42,7 +41,7 @@
 <div id="chat-messages"></div>
 
 <div class="input-area">
-    <input type="text" id="msgInput" placeholder="Сообщение" maxlength="100" autocomplete="off">
+    <input type="text" id="msgInput" placeholder="Сообщение" maxlength="100">
     <button id="sendBtn">➤</button>
 </div>
 
@@ -75,7 +74,6 @@
       if (newName && newName.trim() !== "") {
           userName = newName.trim();
           localStorage.setItem('chat_name', userName);
-          alert("Ник изменен!");
       }
   };
 
@@ -85,7 +83,7 @@
 
   function sendToDB() {
     const text = input.value.trim();
-    if (text !== "" && /[a-zA-Zа-яА-Я0-9]/.test(text)) {
+    if (text !== "") {
       const now = new Date();
       const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const date = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
@@ -99,7 +97,6 @@
 
   onChildAdded(query(messagesRef, limitToLast(50)), (snap) => {
     const data = snap.val();
-    
     if (data.date && data.date !== lastDateLabel) {
         const dateDiv = document.createElement('div');
         dateDiv.className = 'date-divider';
@@ -107,18 +104,14 @@
         container.appendChild(dateDiv);
         lastDateLabel = data.date;
     }
-
     const wrapper = document.createElement('div');
     wrapper.className = 'msg-wrapper';
     if (data.name === userName) wrapper.classList.add('my-msg-wrapper');
-
     const div = document.createElement('div');
     div.className = 'msg';
     if (data.name === userName) div.classList.add('my-msg');
-    
     div.innerHTML = `<b>${data.name}</b><span></span><i>${data.time || ''}</i>`;
     div.querySelector('span').innerText = data.text;
-    
     wrapper.appendChild(div);
     container.appendChild(wrapper);
     container.scrollTop = container.scrollHeight;
