@@ -66,11 +66,11 @@
   let rep = null;
 
   document.getElementById('profileBtn').onclick = () => {
-      const n = prompt("Ник:", u);
+      const n = prompt("Ник (макс 15):", u);
       if (n) {
-          const cl = n.trim().substring(0, 10);
+          const cl = n.trim().substring(0, 15);
           const ok = (cl.match(/[a-zA-Zа-яА-ЯёЁіІїЇєЄґҐ0-9]/g) || []).length;
-          if (ok === cl.length && cl.length >= 2) {
+          if (ok === cl.length && cl.length >= 1) {
               u = cl;
               localStorage.setItem('chat_name', u);
           }
@@ -86,7 +86,7 @@
   function _s() {
     const v = inp.value.trim();
     const x = (v.match(/[a-zA-Zа-яА-ЯёЁіІїЇєЄґҐ0-9]/g) || []).length;
-    if (v !== "" && v.length <= 100 && x >= 2 && (x / v.length > 0.3)) {
+    if (v !== "" && v.length <= 100 && x >= 1 && (x / v.length > 0.3)) {
       const mD = {
         name: u, text: v,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -103,7 +103,7 @@
 
   onChildAdded(query(ref(db, 'messages'), limitToLast(50)), (s) => {
     const k = s.val();
-    let cN = k.name ? String(k.name).substring(0, 10) : "Аноним";
+    let cN = k.name ? String(k.name).substring(0, 15) : "Аноним";
     if (!/^[a-zA-Zа-яА-ЯёЁіІїЇєЄґҐ0-9]+$/.test(cN)) { cN = "Юзер"; }
 
     if (k.date && k.date !== curD) {
